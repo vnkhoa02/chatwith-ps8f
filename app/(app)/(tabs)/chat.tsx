@@ -14,9 +14,16 @@ import {
 } from "react-native";
 
 export default function Chat() {
-  const { messages, isStreaming, sendMessage } = useAi();
-  const { message, setMessage, mediaUri, fileName, fileSize, pickImage } =
-    useChat();
+  const { messages, sendMessage } = useAi();
+  const {
+    message,
+    resetInput,
+    setMessage,
+    mediaUri,
+    fileName,
+    fileSize,
+    pickImage,
+  } = useChat();
 
   useEffect(() => {
     (async () => {
@@ -35,14 +42,14 @@ export default function Chat() {
 
   const handleSend = async () => {
     if (!message.trim()) return;
+    resetInput();
     await sendMessage(message);
-    setMessage("");
   };
 
   return (
     <View style={styles.container}>
       {/* Chat messages */}
-      <ChatMessages messages={messages} isStreaming={isStreaming} />
+      <ChatMessages messages={messages} />
 
       {/* Input bar */}
       <View style={styles.inputContainer}>
@@ -87,7 +94,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#000",
     alignItems: "center",
     justifyContent: "flex-end",
-    padding: 20,
+    padding: 0,
   },
   inputContainer: {
     flexDirection: "row",

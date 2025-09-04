@@ -36,7 +36,15 @@ export function useAi() {
       ];
       setMessages(newMessages);
 
+      // ✅ keep system + last 2 exchanges (user+assistant) + new user message
+      const contextMessages = [
+        newMessages[0], // system
+        ...newMessages.slice(-3), // last 3 (user/assistant)
+      ];
+
       const token = await getAuthToken();
+      console.log("Sending with context:", contextMessages);
+
       controllerRef.current = new AbortController();
       const response = await fetch(API_URL, {
         method: "POST",
@@ -47,67 +55,25 @@ export function useAi() {
         },
         body: JSON.stringify({
           model: "gpt-4.1-mini",
-          messages: newMessages,
+          messages: contextMessages,
           temperature: 0.7,
           max_tokens: 1000,
-          stream: true,
+          stream: false,
         }),
         signal: controllerRef.current.signal,
       });
 
-      if (!response.body) {
-        throw new Error("No response body");
+      const data = await response.json();
+      if (!response.ok) {
+        console.error("API error:", data);
+        throw new Error(data?.error?.message || "API request failed");
       }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder("utf-8");
-      let assistantMessage = "";
-
-      setIsStreaming(true);
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true }).trim();
-        if (!chunk) continue;
-
-        // Handle each line (API sends JSON chunks line-delimited)
-        for (const line of chunk.split("\n")) {
-          if (!line.startsWith("{")) continue; // ignore non-JSON lines
-
-          try {
-            const data = JSON.parse(line);
-
-            // 🔹 Stream chunks
-            if (data.object === "chat.completion.chunk") {
-              const token = data.choices?.[0]?.delta?.content;
-              if (token) {
-                assistantMessage += token;
-                setMessages((prev) => [
-                  ...prev.slice(0, -1),
-                  { role: "assistant", content: assistantMessage },
-                ]);
-              }
-            }
-
-            // 🔹 Final response
-            else if (data.type === "completion") {
-              assistantMessage = data.final_response || assistantMessage;
-              setMessages((prev) => [
-                ...prev,
-                { role: "assistant", content: assistantMessage },
-              ]);
-              setIsStreaming(false);
-              return;
-            }
-          } catch (err) {
-            console.warn("Parse error:", line, err);
-          }
-        }
-      }
-
-      setIsStreaming(false);
+      let assistantMessage = data.choices?.[0]?.message?.content || "";
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: assistantMessage },
+      ]);
     },
   });
 

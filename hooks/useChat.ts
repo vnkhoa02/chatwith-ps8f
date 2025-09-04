@@ -36,14 +36,8 @@ const useChat = () => {
     }
   };
 
-  const sendMessage = () => {
+  const resetInput = () => {
     if (message.trim() || mediaUri) {
-      console.log("Sending:", {
-        text: message,
-        media: mediaUri,
-        name: fileName,
-        size: fileSize,
-      });
       setMessage("");
       setMediaUri(null);
       setFileName(null);
@@ -58,7 +52,7 @@ const useChat = () => {
     fileName,
     fileSize,
     pickImage,
-    sendMessage,
+    resetInput,
   };
 };
 

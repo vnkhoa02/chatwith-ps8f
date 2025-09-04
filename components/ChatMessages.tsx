@@ -1,22 +1,15 @@
 import { Message } from "@/hooks/useAi";
 import React from "react";
-import {
-    ActivityIndicator,
-    FlatList,
-    StyleSheet,
-    Text,
-    View,
-} from "react-native";
+import { FlatList, StyleSheet, Text, View } from "react-native";
 
 interface Props {
   messages: Message[];
-  isStreaming: boolean;
 }
 
-export default function ChatMessages({ messages, isStreaming }: Props) {
+export default function ChatMessages({ messages }: Props) {
   return (
     <FlatList
-      data={messages.filter((m) => m.role !== "system")} // hide system
+      data={[...messages].reverse().filter((m) => m.role !== "system")} // reversed for inverted list
       keyExtractor={(_, index) => index.toString()}
       renderItem={({ item }) => (
         <View
@@ -37,14 +30,8 @@ export default function ChatMessages({ messages, isStreaming }: Props) {
           </Text>
         </View>
       )}
-      ListFooterComponent={
-        isStreaming ? (
-          <View style={styles.typingIndicator}>
-            <ActivityIndicator size="small" color="#999" />
-            <Text style={styles.typingText}>Assistant is typing…</Text>
-          </View>
-        ) : null
-      }
+      inverted
+      ListFooterComponent={null}
       contentContainerStyle={styles.list}
     />
   );
@@ -52,16 +39,16 @@ export default function ChatMessages({ messages, isStreaming }: Props) {
 
 const styles = StyleSheet.create({
   list: {
-    flexGrow: 1,
-    justifyContent: "flex-end",
+    paddingBottom: 60,
     paddingVertical: 10,
     paddingHorizontal: 12,
   },
   messageContainer: {
-    maxWidth: "80%",
+    maxWidth: "90%",
     marginVertical: 6,
     padding: 10,
     borderRadius: 12,
+    margin: 20,
   },
   userMessage: {
     alignSelf: "flex-end",
