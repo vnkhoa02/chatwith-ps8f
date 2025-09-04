@@ -211,6 +211,7 @@ const useAuth = () => {
       }
 
       const tokenResponse: TokenResponse = await response.json();
+      console.log("Received token response", tokenResponse);
       await saveTokens(tokenResponse);
       return tokenResponse;
     },
@@ -268,7 +269,6 @@ const useAuth = () => {
       verifyCodeMutation.mutateAsync(params),
     getJwt,
     signOut,
-    checkAuth: () => state.isAuthenticated,
     sendCodeState: {
       isLoading: sendCodeMutation.isPending,
       error: sendCodeMutation.error,

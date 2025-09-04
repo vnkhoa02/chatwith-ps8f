@@ -1,3 +1,5 @@
+import ChatMessages from "@/components/ChatMessages";
+import { useAi } from "@/hooks/useAi";
 import useChat from "@/hooks/useChat";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -12,15 +14,9 @@ import {
 } from "react-native";
 
 export default function Chat() {
-  const {
-    message,
-    setMessage,
-    mediaUri,
-    fileName,
-    fileSize,
-    pickImage,
-    sendMessage,
-  } = useChat();
+  const { messages, isStreaming, sendMessage } = useAi();
+  const { message, setMessage, mediaUri, fileName, fileSize, pickImage } =
+    useChat();
 
   useEffect(() => {
     (async () => {
@@ -37,8 +33,18 @@ export default function Chat() {
     })();
   }, []);
 
+  const handleSend = async () => {
+    if (!message.trim()) return;
+    await sendMessage(message);
+    setMessage("");
+  };
+
   return (
     <View style={styles.container}>
+      {/* Chat messages */}
+      <ChatMessages messages={messages} isStreaming={isStreaming} />
+
+      {/* Input bar */}
       <View style={styles.inputContainer}>
         <TouchableOpacity onPress={pickImage} style={styles.iconButton}>
           <Ionicons name="image-outline" size={22} color="#BBB" />
@@ -56,7 +62,7 @@ export default function Chat() {
           <Ionicons name={"mic-outline"} size={22} color="#BBB" />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={sendMessage} style={styles.sendButton}>
+        <TouchableOpacity onPress={handleSend} style={styles.sendButton}>
           <Ionicons name="send-outline" size={22} color="#FFF" />
         </TouchableOpacity>
       </View>
@@ -82,14 +88,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-end",
     padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    color: "#FFF",
-    marginBottom: 10,
-    position: "absolute",
-    top: 20,
-    left: 20,
   },
   inputContainer: {
     flexDirection: "row",
