@@ -1,7 +1,7 @@
+import useChat from "@/hooks/useChat";
 import { Ionicons } from "@expo/vector-icons";
-import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import {
   Alert,
   StyleSheet,
@@ -12,10 +12,15 @@ import {
 } from "react-native";
 
 export default function Chat() {
-  const [message, setMessage] = useState("");
-  const [mediaUri, setMediaUri] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [fileSize, setFileSize] = useState<number | null>(null);
+  const {
+    message,
+    setMessage,
+    mediaUri,
+    fileName,
+    fileSize,
+    pickImage,
+    sendMessage,
+  } = useChat();
 
   useEffect(() => {
     (async () => {
@@ -32,52 +37,9 @@ export default function Chat() {
     })();
   }, []);
 
-  // Single image picker function — only images
-  const pickImage = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const uri = result.assets[0].uri;
-        setMediaUri(uri);
-        setFileName(uri.split("/").pop() || null);
-        try {
-          const info = await FileSystem.getInfoAsync(uri);
-          setFileSize(info.exists ? info.size : null);
-        } catch (e) {
-          // ignore
-        }
-      }
-    } catch (err) {
-      console.warn("pickImage error", err);
-      Alert.alert("Error", "Could not pick the image.");
-    }
-  };
-
-  const sendMessage = () => {
-    if (message.trim() || mediaUri) {
-      console.log("Sending:", {
-        text: message,
-        media: mediaUri,
-        name: fileName,
-        size: fileSize,
-      });
-      setMessage("");
-      setMediaUri(null);
-      setFileName(null);
-      setFileSize(null);
-    }
-  };
-
   return (
     <View style={styles.container}>
       <View style={styles.inputContainer}>
-        {/* both buttons open image picker — only images */}
         <TouchableOpacity onPress={pickImage} style={styles.iconButton}>
           <Ionicons name="image-outline" size={22} color="#BBB" />
         </TouchableOpacity>

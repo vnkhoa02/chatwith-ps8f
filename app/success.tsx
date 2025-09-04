@@ -16,29 +16,38 @@ export default function Success() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0000FF",
+    backgroundColor: "#4A90E2", // Softer blue color
     alignItems: "center",
     justifyContent: "center",
-    padding: 20,
+    padding: 24,
   },
   title: {
-    fontSize: 24,
+    fontSize: 32,
+    fontWeight: "bold",
     color: "#FFF",
-    marginBottom: 10,
+    marginBottom: 16,
   },
   subtitle: {
-    fontSize: 16,
-    color: "#FFF",
+    fontSize: 18,
+    color: "rgba(255, 255, 255, 0.9)",
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 32,
   },
   button: {
     backgroundColor: "#FFF",
-    padding: 10,
-    borderRadius: 5,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   buttonText: {
-    color: "#000",
+    color: "#4A90E2",
+    fontSize: 16,
+    fontWeight: "600",
     textAlign: "center",
   },
 });
