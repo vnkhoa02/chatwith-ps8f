@@ -2,12 +2,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Platform } from "react-native";
+import * as naclUtil from "tweetnacl-util";
 import { AUTH_CONFIG } from "../config/auth";
 import {
-    AuthError,
-    AuthState,
-    TokenResponse,
-    VerifyCodeParams,
+  AuthError,
+  AuthState,
+  TokenResponse,
+  VerifyCodeParams,
 } from "../types/auth";
 import { generateKeyPair, KeyPair, signMessage } from "../utils/ed25519";
 
@@ -40,7 +41,7 @@ const useAuth = () => {
 
       if (!priv || !pub) {
         console.log("Generating new Ed25519 key pair");
-        const kp = await generateKeyPair();
+        const kp = generateKeyPair();
         console.log("Generated key pair", kp);
         await Promise.all([
           AsyncStorage.setItem(
@@ -121,14 +122,14 @@ const useAuth = () => {
 
       if (privBase64 && pubBase64) {
         return {
-          privateKey: Uint8Array.from(Buffer.from(privBase64, "base64")),
-          publicKey: Uint8Array.from(Buffer.from(pubBase64, "base64")),
+          privateKey: naclUtil.decodeBase64(privBase64),
+          publicKey: naclUtil.decodeBase64(pubBase64),
           privateKeyBase64: privBase64,
           publicKeyBase64: pubBase64,
         };
       }
 
-      const keyPair = await generateKeyPair();
+      const keyPair = generateKeyPair();
       await Promise.all([
         AsyncStorage.setItem(
           AUTH_CONFIG.STORAGE_KEYS.ED_PRIV_KEY,
@@ -141,6 +142,7 @@ const useAuth = () => {
       ]);
       return keyPair;
     } catch (error) {
+      console.error("Key pair load/create failed:", error);
       throw new AuthError("Failed to manage keypair");
     }
   };
@@ -187,7 +189,7 @@ const useAuth = () => {
   >({
     mutationFn: async (params) => {
       const keyPair = await loadOrCreateKeyPair();
-      const signature = await signMessage(params.challenge, keyPair.privateKey);
+      const signature = signMessage(params.challenge, keyPair.privateKey);
 
       const response = await fetch(
         `${AUTH_CONFIG.BASE_URL}/api/v1/auth/verify`,
