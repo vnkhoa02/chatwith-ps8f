@@ -6,7 +6,7 @@ export default function Success() {
     <View style={styles.container}>
       <Text style={styles.title}>Eepis Assistant</Text>
       <Text style={styles.subtitle}>Successfully verified!</Text>
-      <Link href="/(tabs)" style={styles.button}>
+      <Link href="/(app)/(tabs)/chat" style={styles.button}>
         <Text style={styles.buttonText}>Go to App</Text>
       </Link>
     </View>

@@ -5,7 +5,7 @@ export default function TabsLayout() {
   return (
     <Tabs>
       <Tabs.Screen
-        name="index"
+        name="chat"
         options={{
           title: "Chat",
           tabBarIcon: ({ color, size }) => (

@@ -4,7 +4,7 @@ import {
   ThemeProvider,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { Redirect, Slot } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
 import "react-native-reanimated";
@@ -18,34 +18,19 @@ const queryClient = new QueryClient({
     queries: {
       retry: false,
       refetchOnWindowFocus: false,
-      staleTime: 1000 * 30, // 30s
+      staleTime: 1000 * 30,
     },
   },
 });
 
-// 🔹 AuthGate decides which routes to render
 function AuthGate() {
   const { isAuthenticated } = useAuthContext();
 
-  return (
-    <Stack>
-      {isAuthenticated ? (
-        <>
-          <Stack.Screen name="success" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" />
-        </>
-      ) : (
-        <>
-          <Stack.Screen
-            name="device-authentication"
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen name="verify-email" options={{ headerShown: false }} />
-        </>
-      )}
-    </Stack>
-  );
+  if (isAuthenticated) {
+    return <Redirect href="/(app)/(tabs)/chat" />;
+  } else {
+    return <Redirect href="/(auth)/device-authentication" />;
+  }
 }
 
 export default function RootLayout() {
@@ -54,9 +39,7 @@ export default function RootLayout() {
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
 
-  if (!loaded) {
-    return null;
-  }
+  if (!loaded) return null;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -65,6 +48,7 @@ export default function RootLayout() {
           value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
         >
           <AuthGate />
+          <Slot />
           <StatusBar style="auto" />
         </ThemeProvider>
       </AuthProvider>
