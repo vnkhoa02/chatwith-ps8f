@@ -11,8 +11,8 @@ export type KeyPair = {
  * Generate a new Ed25519 key pair
  */
 export async function generateKeyPair(): Promise<KeyPair> {
-  const privateKey = ed.utils.randomSecretKey();
-  const publicKey = await ed.getPublicKeyAsync(privateKey);
+  const privateKey = ed.utils.randomPrivateKey();
+  const publicKey = await ed.getPublicKey(privateKey);
 
   return {
     privateKey,
@@ -30,7 +30,7 @@ export async function signMessage(
   privateKey: Uint8Array
 ): Promise<string> {
   const msg = new TextEncoder().encode(message);
-  const signature = await ed.signAsync(msg, privateKey);
+  const signature = await ed.sign(msg, privateKey);
   return Buffer.from(signature).toString("base64");
 }
 
@@ -44,5 +44,5 @@ export async function verifySignature(
 ): Promise<boolean> {
   const msg = new TextEncoder().encode(message);
   const signature = Buffer.from(signatureBase64, "base64");
-  return ed.verifyAsync(signature, msg, publicKey);
+  return await ed.verify(signature, msg, publicKey);
 }

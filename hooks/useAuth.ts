@@ -39,7 +39,9 @@ const useAuth = () => {
       }
 
       if (!priv || !pub) {
+        console.log("Generating new Ed25519 key pair");
         const kp = await generateKeyPair();
+        console.log("Generated key pair", kp);
         await Promise.all([
           AsyncStorage.setItem(
             AUTH_CONFIG.STORAGE_KEYS.ED_PRIV_KEY,
