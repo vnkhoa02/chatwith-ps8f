@@ -1,4 +1,5 @@
-import * as ed from "@noble/ed25519";
+import nacl from "tweetnacl";
+import * as naclUtil from "tweetnacl-util";
 
 export type KeyPair = {
   privateKey: Uint8Array;
@@ -10,39 +11,35 @@ export type KeyPair = {
 /**
  * Generate a new Ed25519 key pair
  */
-export async function generateKeyPair(): Promise<KeyPair> {
-  const privateKey = ed.utils.randomPrivateKey();
-  const publicKey = await ed.getPublicKey(privateKey);
+export function generateKeyPair(): KeyPair {
+  const keyPair = nacl.sign.keyPair();
 
   return {
-    privateKey,
-    publicKey,
-    privateKeyBase64: Buffer.from(privateKey).toString("base64"),
-    publicKeyBase64: Buffer.from(publicKey).toString("base64"),
+    privateKey: keyPair.secretKey, // 64 bytes (private + public)
+    publicKey: keyPair.publicKey, // 32 bytes
+    privateKeyBase64: naclUtil.encodeBase64(keyPair.secretKey),
+    publicKeyBase64: naclUtil.encodeBase64(keyPair.publicKey),
   };
 }
 
 /**
  * Sign a message using Ed25519 private key
  */
-export async function signMessage(
-  message: string,
-  privateKey: Uint8Array
-): Promise<string> {
-  const msg = new TextEncoder().encode(message);
-  const signature = await ed.sign(msg, privateKey);
-  return Buffer.from(signature).toString("base64");
+export function signMessage(message: string, privateKey: Uint8Array): string {
+  const msgUint8 = naclUtil.decodeUTF8(message);
+  const signature = nacl.sign.detached(msgUint8, privateKey);
+  return naclUtil.encodeBase64(signature);
 }
 
 /**
  * Verify a signature using Ed25519 public key
  */
-export async function verifySignature(
+export function verifySignature(
   message: string,
   signatureBase64: string,
   publicKey: Uint8Array
-): Promise<boolean> {
-  const msg = new TextEncoder().encode(message);
-  const signature = Buffer.from(signatureBase64, "base64");
-  return await ed.verify(signature, msg, publicKey);
+): boolean {
+  const msgUint8 = naclUtil.decodeUTF8(message);
+  const signature = naclUtil.decodeBase64(signatureBase64);
+  return nacl.sign.detached.verify(msgUint8, signature, publicKey);
 }
