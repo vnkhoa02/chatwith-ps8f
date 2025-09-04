@@ -1,9 +1,16 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Link } from "expo-router";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 
 export default function DeviceAuthentication() {
   return (
     <View style={styles.container}>
+      <Ionicons
+        name="shield-checkmark-outline"
+        size={50}
+        color="#1E90FF"
+        style={styles.icon}
+      />
       <Text style={styles.title}>Device Authentication</Text>
       <Text style={styles.subtitle}>
         Enter your email address to register this device
@@ -28,6 +35,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 20,
   },
+  icon: {
+    marginBottom: 20,
+  },
   title: {
     fontSize: 24,
     color: "#FFF",
@@ -51,8 +61,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#222",
   },
   button: {
-    backgroundColor: "#1E90FF",
-    padding: 10,
+    backgroundColor: "#555",
+    paddingVertical: 10,
+    paddingHorizontal: 40,
     borderRadius: 5,
   },
   buttonText: {

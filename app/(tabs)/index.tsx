@@ -1,75 +1,164 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Ionicons } from "@expo/vector-icons";
+import * as FileSystem from "expo-file-system";
+import * as ImagePicker from "expo-image-picker";
+import React, { useEffect, useState } from "react";
+import {
+  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+export default function Chat() {
+  const [message, setMessage] = useState("");
+  const [mediaUri, setMediaUri] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [fileSize, setFileSize] = useState<number | null>(null);
 
-export default function HomeScreen() {
+  useEffect(() => {
+    (async () => {
+      const { status: cameraStatus } =
+        await ImagePicker.requestCameraPermissionsAsync();
+      const { status: mediaStatus } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (cameraStatus !== "granted" || mediaStatus !== "granted") {
+        Alert.alert(
+          "Permissions required",
+          "Please allow camera and media access."
+        );
+      }
+    })();
+  }, []);
+
+  // Single image picker function — only images
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const uri = result.assets[0].uri;
+        setMediaUri(uri);
+        setFileName(uri.split("/").pop() || null);
+        try {
+          const info = await FileSystem.getInfoAsync(uri);
+          setFileSize(info.exists ? info.size : null);
+        } catch (e) {
+          // ignore
+        }
+      }
+    } catch (err) {
+      console.warn("pickImage error", err);
+      Alert.alert("Error", "Could not pick the image.");
+    }
+  };
+
+  const sendMessage = () => {
+    if (message.trim() || mediaUri) {
+      console.log("Sending:", {
+        text: message,
+        media: mediaUri,
+        name: fileName,
+        size: fileSize,
+      });
+      setMessage("");
+      setMediaUri(null);
+      setFileName(null);
+      setFileSize(null);
+    }
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+    <View style={styles.container}>
+      <View style={styles.inputContainer}>
+        {/* both buttons open image picker — only images */}
+        <TouchableOpacity onPress={pickImage} style={styles.iconButton}>
+          <Ionicons name="image-outline" size={22} color="#BBB" />
+        </TouchableOpacity>
+
+        <TextInput
+          style={styles.input}
+          value={message}
+          onChangeText={setMessage}
+          placeholder="Message..."
+          placeholderTextColor="#BBB"
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+
+        <TouchableOpacity style={styles.iconButton}>
+          <Ionicons name={"mic-outline"} size={22} color="#BBB" />
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={sendMessage} style={styles.sendButton}>
+          <Ionicons name="send-outline" size={22} color="#FFF" />
+        </TouchableOpacity>
+      </View>
+
+      {mediaUri && (
+        <Text
+          style={styles.mediaPreview}
+          numberOfLines={1}
+          ellipsizeMode="middle"
+        >
+          Selected: {fileName ?? mediaUri.split("/").pop()}
+          {fileSize ? ` — ${(fileSize / 1024).toFixed(1)} KB` : ""}
+        </Text>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: "#000",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    padding: 20,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  title: {
+    fontSize: 24,
+    color: "#FFF",
+    marginBottom: 10,
+    position: "absolute",
+    top: 20,
+    left: 20,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    backgroundColor: "#222",
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  iconButton: {
+    padding: 8,
+    marginRight: 6,
+    backgroundColor: "#333",
+    borderRadius: 6,
+  },
+  input: {
+    flex: 1,
+    height: 40,
+    color: "#FFF",
+    paddingHorizontal: 10,
+  },
+  sendButton: {
+    padding: 8,
+    marginLeft: 6,
+    backgroundColor: "#0A84FF",
+    borderRadius: 6,
+  },
+  mediaPreview: {
+    color: "#BBB",
+    marginTop: 10,
+    width: "100%",
   },
 });
