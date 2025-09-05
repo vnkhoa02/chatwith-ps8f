@@ -11,6 +11,7 @@ type Role = "system" | "user" | "assistant";
 export interface Message {
   role: Role;
   content: string;
+  isAudio?: boolean; // mark if the message is audio
 }
 
 export function useAi() {
@@ -29,7 +30,13 @@ export function useAi() {
   };
 
   const chatMutation = useMutation({
-    mutationFn: async (userMessage: string) => {
+    mutationFn: async ({
+      userMessage,
+      isAudio = false,
+    }: {
+      userMessage: string;
+      isAudio: boolean;
+    }) => {
       const newMessages = [
         ...messages,
         { role: "user" as const, content: userMessage },
@@ -39,11 +46,18 @@ export function useAi() {
       // ✅ keep system + last 2 exchanges (user+assistant) + new user message
       const contextMessages = [
         newMessages[0], // system
-        ...newMessages.slice(-3), // last 3 (user/assistant)
+        ...newMessages.slice(-3),
       ];
 
       const token = await getAuthToken();
-      console.log("Sending with context:", contextMessages);
+      console.log(
+        `Sending with context:`,
+        contextMessages.map((m) => ({
+          role: m.role,
+          isAudio: m.isAudio,
+          preview: m.content.slice(0, 30),
+        }))
+      );
 
       controllerRef.current = new AbortController();
       const response = await fetch(API_URL, {
@@ -52,10 +66,14 @@ export function useAi() {
           "X-P8-Agent": "p8-research",
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
+          ...(isAudio ? { "X-Chat-Is-Audio": "true" } : {}),
         },
         body: JSON.stringify({
           model: "gpt-4.1-mini",
-          messages: contextMessages,
+          messages: contextMessages.map(({ role, content }) => ({
+            role,
+            content,
+          })),
           temperature: 0.7,
           max_tokens: 1000,
           stream: false,
@@ -69,7 +87,7 @@ export function useAi() {
         throw new Error(data?.error?.message || "API request failed");
       }
 
-      let assistantMessage = data.choices?.[0]?.message?.content || "";
+      const assistantMessage = data.choices?.[0]?.message?.content || "";
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: assistantMessage },
@@ -85,7 +103,10 @@ export function useAi() {
   return {
     messages,
     isStreaming,
-    sendMessage: (msg: string) => chatMutation.mutateAsync(msg),
+    sendMessage: (msg: string) =>
+      chatMutation.mutateAsync({ userMessage: msg, isAudio: false }),
+    sendAudioMessage: (base64Audio: string) =>
+      chatMutation.mutateAsync({ userMessage: base64Audio, isAudio: true }),
     stop,
   };
 }

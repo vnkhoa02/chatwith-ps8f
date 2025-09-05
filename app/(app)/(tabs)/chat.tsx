@@ -2,8 +2,10 @@ import ChatMessages from "@/components/ChatMessages";
 import { useAi } from "@/hooks/useAi";
 import useChat from "@/hooks/useChat";
 import { Ionicons } from "@expo/vector-icons";
+import { Audio } from "expo-av";
+import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   StyleSheet,
@@ -14,7 +16,7 @@ import {
 } from "react-native";
 
 export default function Chat() {
-  const { messages, sendMessage } = useAi();
+  const { messages, sendMessage, sendAudioMessage } = useAi();
   const {
     message,
     resetInput,
@@ -25,16 +27,25 @@ export default function Chat() {
     pickImage,
   } = useChat();
 
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+
   useEffect(() => {
     (async () => {
+      const { status: micStatus } = await Audio.requestPermissionsAsync();
       const { status: cameraStatus } =
         await ImagePicker.requestCameraPermissionsAsync();
       const { status: mediaStatus } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (cameraStatus !== "granted" || mediaStatus !== "granted") {
+
+      if (
+        micStatus !== "granted" ||
+        cameraStatus !== "granted" ||
+        mediaStatus !== "granted"
+      ) {
         Alert.alert(
           "Permissions required",
-          "Please allow camera and media access."
+          "Please allow microphone, camera and media access."
         );
       }
     })();
@@ -44,6 +55,49 @@ export default function Chat() {
     if (!message.trim()) return;
     resetInput();
     await sendMessage(message);
+  };
+
+  const startRecording = async () => {
+    try {
+      console.log("Starting recording…");
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      setRecording(recording);
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Failed to start recording", err);
+    }
+  };
+
+  const stopRecording = async () => {
+    console.log("Stopping recording…");
+    if (!recording) return;
+    setIsRecording(false);
+
+    try {
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      console.log("Recording saved at", uri);
+
+      if (uri) {
+        // convert to base64
+        const base64Audio = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        await sendAudioMessage(base64Audio);
+      }
+    } catch (err) {
+      console.error("Failed to stop recording", err);
+    } finally {
+      setRecording(null);
+    }
   };
 
   return (
@@ -65,8 +119,15 @@ export default function Chat() {
           placeholderTextColor="#BBB"
         />
 
-        <TouchableOpacity style={styles.iconButton}>
-          <Ionicons name={"mic-outline"} size={22} color="#BBB" />
+        <TouchableOpacity
+          style={[styles.iconButton, isRecording && { backgroundColor: "red" }]}
+          onPress={isRecording ? stopRecording : startRecording}
+        >
+          <Ionicons
+            name={isRecording ? "mic" : "mic-outline"}
+            size={22}
+            color="#FFF"
+          />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={handleSend} style={styles.sendButton}>

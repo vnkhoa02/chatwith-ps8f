@@ -5,8 +5,6 @@ import { useMutation } from "@tanstack/react-query";
 import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
 
-const BASE_URL = process.env.P8_FS_API || "https://p8fs.percolationlabs.ai";
-
 const STORAGE_KEYS = {
   X25519_PUB: "x25519_pub",
   X25519_SECRET: "x25519_secret",
