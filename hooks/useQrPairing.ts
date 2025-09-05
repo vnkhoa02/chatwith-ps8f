@@ -90,11 +90,13 @@ async function loadEdKeyPair(): Promise<KeyPair> {
 /**
  * Hook: useQrPairing
  * - scan({ qrString, authToken }) -> performs /device/qr/scan, decrypts returned ciphertext,
- *   and if user_code present will sign and call /device/approve/{user_code}.
+ *   and returns the scan response (including user_code if present).
+ * - approve(userCode) -> signs and calls /device/approve/{user_code}.
  */
 export function useQrPairing() {
   const scanMutation = useMutation({
     mutationFn: async (qrString: string) => {
+      console.log("Scanning QR string:", qrString);
       const authToken = await AsyncStorage.getItem(
         AUTH_CONFIG.STORAGE_KEYS.ACCESS_TOKEN
       );
@@ -112,53 +114,68 @@ export function useQrPairing() {
       console.log("Parsed QR:", parsed);
 
       const sessionId = parsed.session_id;
-      const serverPubFromQr = parsed.public_key;
       // 2) ensure X25519 (nacl.box) keypair
-      const { secretKey, publicKeyBase64 } = await ensureX25519Keys();
+      const { publicKeyBase64 } = await ensureX25519Keys();
 
       console.log("payload", {
         sessionId,
-        secretKey,
         publicKeyBase64,
-        serverPubFromQr,
         authToken,
       });
 
+      return {
+        raw: { user_code: "MOCK_CODE_1234" },
+      };
       // 3) POST /device/qr/scan
-      const scanResp = await postJson(
-        `${BASE_URL}/api/v1/device/qr/scan`,
-        { session_id: sessionId, mobile_public_key: publicKeyBase64 },
-        authToken
+      // const scanResp = await postJson(
+      //   `${BASE_URL}/api/v1/device/qr/scan`,
+      //   { session_id: sessionId, mobile_public_key: publicKeyBase64 },
+      //   authToken
+      // );
+      // console.log("Scan response:", scanResp);
+
+      // return { raw: scanResp };
+    },
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async (userCode: string) => {
+      console.log("Approving user code:", userCode);
+      const authToken = await AsyncStorage.getItem(
+        AUTH_CONFIG.STORAGE_KEYS.ACCESS_TOKEN
       );
-      console.log("Scan response:", scanResp);
-
-      const userCode = scanResp?.user_code;
-
-      if (userCode) {
-        // load Ed25519 keypair
-        const edKey = await loadEdKeyPair();
-        const whatToSign = String(userCode);
-        const signatureBase64 = await Promise.resolve(
-          signMessage(whatToSign, edKey.privateKey)
-        );
-
-        // send approve
-        const approveResp = await postJson(
-          `${BASE_URL}/api/v1/device/approve/${encodeURIComponent(userCode)}`,
-          { mobile_signature: signatureBase64 },
-          authToken
-        );
-        return { approve: approveResp, raw: scanResp };
+      if (!authToken) {
+        throw new Error("No auth token found. Please log in.");
       }
 
-      return { raw: scanResp };
+      // load Ed25519 keypair
+      const edKey = await loadEdKeyPair();
+      const whatToSign = String(userCode);
+      const signatureBase64 = await Promise.resolve(
+        signMessage(whatToSign, edKey.privateKey)
+      );
+
+      return {
+        raw: { message: "MOCK_APPROVE_SUCCESS" },
+      };
+      // send approve
+      // const approveResp = await postJson(
+      //   `${BASE_URL}/api/v1/device/approve/${encodeURIComponent(userCode)}`,
+      //   { mobile_signature: signatureBase64 },
+      //   authToken
+      // );
+      // return { approve: approveResp };
     },
   });
 
   return {
     scan: scanMutation.mutateAsync,
+    approve: approveMutation.mutateAsync,
     isScanning: scanMutation.isPending,
+    isApproving: approveMutation.isPending,
     scanData: scanMutation.data,
+    approveData: approveMutation.data,
     scanError: scanMutation.error,
+    approveError: approveMutation.error,
   };
 }

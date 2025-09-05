@@ -22,20 +22,76 @@ export default function QrScan() {
   const router = useRouter();
   const cameraRef = useRef<CameraView | null>(null);
 
-  const { scan, isScanning, scanData, scanError } = useQrPairing();
+  const {
+    scan,
+    approve,
+    isScanning,
+    isApproving,
+    scanData,
+    approveData,
+    scanError,
+    approveError,
+  } = useQrPairing();
 
   useEffect(() => {
-    if (scanData) setPairResult(scanData);
-  }, [scanData]);
+    if (scanData) {
+      setPairResult((prev: any) => ({ ...prev, scan: scanData }));
+      const userCode = scanData?.raw?.user_code;
+      if (userCode) {
+        Alert.alert(
+          "Approve Pairing?",
+          "Do you want to approve this pairing?",
+          [
+            {
+              text: "No",
+              style: "cancel",
+              onPress: () => {
+                setScanned(false);
+              },
+            },
+            {
+              text: "Yes",
+              onPress: async () => {
+                try {
+                  await approve(userCode);
+                  Alert.alert("Approved", "Pairing approved successfully.");
+                } catch (err: any) {
+                  console.error("Approve failed", err);
+                  Alert.alert("Approve failed", err?.message ?? String(err));
+                }
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert("Scanned", "QR scanned successfully. No approval needed.");
+      }
+    }
+  }, [scanData, approve]);
+
+  useEffect(() => {
+    if (approveData) {
+      setPairResult((prev: any) => ({ ...prev, approve: approveData }));
+    }
+  }, [approveData]);
 
   useEffect(() => {
     if (scanError) {
       Alert.alert(
-        "Pairing failed",
+        "Scan failed",
         String((scanError as any)?.message || scanError)
       );
     }
   }, [scanError]);
+
+  useEffect(() => {
+    if (approveError) {
+      Alert.alert(
+        "Approve failed",
+        String((approveError as any)?.message || approveError)
+      );
+    }
+  }, [approveError]);
 
   useEffect(() => {
     if (isFocused) {
@@ -56,7 +112,7 @@ export default function QrScan() {
         return;
       }
 
-      if (scanned || isScanning) return;
+      if (scanned || isScanning || isApproving) return;
 
       // debounce logic (ignore rapid duplicate scans within 1.5s)
       if (debounceRef.current) return;
@@ -70,9 +126,7 @@ export default function QrScan() {
 
       (async () => {
         try {
-          const result = await scan(data);
-          setPairResult(result);
-          Alert.alert("Paired", "Pairing successful.");
+          await scan(data);
         } catch (err: any) {
           console.error("Scan failed", err);
           Alert.alert("Scan failed", err?.message ?? String(err));
@@ -80,7 +134,7 @@ export default function QrScan() {
         }
       })();
     },
-    [permission, scanned, isScanning, scan]
+    [permission, scanned, isScanning, isApproving, scan]
   );
 
   if (!permission) {
@@ -133,10 +187,12 @@ export default function QrScan() {
 
         {/* bottom status */}
         <View style={styles.bottomPanel}>
-          {isScanning ? (
+          {isScanning || isApproving ? (
             <View style={styles.row}>
               <ActivityIndicator color="#fff" />
-              <Text style={styles.statusText}>Pairing...</Text>
+              <Text style={styles.statusText}>
+                {isScanning ? "Scanning..." : "Approving..."}
+              </Text>
             </View>
           ) : (
             <Text style={styles.statusText}>
