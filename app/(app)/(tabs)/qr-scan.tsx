@@ -1,9 +1,10 @@
 import { AUTH_CONFIG } from "@/config/auth";
 import { useQrPairing } from "@/hooks/useQrPairing";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useIsFocused } from "@react-navigation/native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -14,20 +15,20 @@ import {
 } from "react-native";
 
 export default function QrScan() {
+  const isFocused = useIsFocused();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [lastQr, setLastQr] = useState<string | null>(null);
   const [pairResult, setPairResult] = useState<any | null>(null);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
   const cameraRef = useRef<CameraView | null>(null);
 
   const { scan, isScanning, scanData, scanError } = useQrPairing();
 
   useEffect(() => {
-    if (scanData) {
-      setPairResult(scanData);
-    }
-  }, [scanData, router]);
+    if (scanData) setPairResult(scanData);
+  }, [scanData]);
 
   useEffect(() => {
     if (scanError) {
@@ -38,41 +39,58 @@ export default function QrScan() {
     }
   }, [scanError]);
 
-  // barcode handler from CameraView
-  const handleBarCodeScanned = async (event: {
-    data: string;
-    type?: string;
-  }) => {
-    const data = event.data;
-    if (!permission || !permission.granted) {
-      Alert.alert(
-        "No camera permission",
-        "Please grant camera permission first."
-      );
-      return;
-    }
-
-    if (scanned || isScanning) return;
-    setScanned(true);
-    setLastQr(data);
-
-    try {
-      const token = await AsyncStorage.getItem(
-        AUTH_CONFIG.STORAGE_KEYS.ACCESS_TOKEN
-      );
-
-      const result = await scan({
-        qrString: data,
-        authToken: token ?? undefined,
-      });
-      setPairResult(result);
-      Alert.alert("Paired", "Pairing successful.");
-    } catch (err: any) {
-      console.error("Scan failed", err);
-      Alert.alert("Scan failed", err?.message ?? String(err));
+  useEffect(() => {
+    if (isFocused) {
       setScanned(false);
+      setLastQr(null);
+      setPairResult(null);
     }
-  };
+  }, [isFocused]);
+
+  // Debounced QR handler
+  const handleBarCodeScanned = useCallback(
+    (event: { data: string; type?: string }) => {
+      if (!permission?.granted) {
+        Alert.alert(
+          "No camera permission",
+          "Please grant camera permission first."
+        );
+        return;
+      }
+
+      if (scanned || isScanning) return;
+
+      // debounce logic (ignore rapid duplicate scans within 1.5s)
+      if (debounceRef.current) return;
+      setTimeout(() => {
+        debounceRef.current = null;
+      }, 1500);
+
+      const data = event.data;
+      setScanned(true);
+      setLastQr(data);
+
+      (async () => {
+        try {
+          const token = await AsyncStorage.getItem(
+            AUTH_CONFIG.STORAGE_KEYS.ACCESS_TOKEN
+          );
+
+          const result = await scan({
+            qrString: data,
+            authToken: token ?? undefined,
+          });
+          setPairResult(result);
+          Alert.alert("Paired", "Pairing successful.");
+        } catch (err: any) {
+          console.error("Scan failed", err);
+          Alert.alert("Scan failed", err?.message ?? String(err));
+          setScanned(false);
+        }
+      })();
+    },
+    [permission, scanned, isScanning, scan]
+  );
 
   if (!permission) {
     return (
@@ -83,7 +101,6 @@ export default function QrScan() {
   }
 
   if (!permission.granted) {
-    // not granted yet
     return (
       <View style={styles.containerCentered}>
         <Text style={styles.text}>
@@ -99,15 +116,16 @@ export default function QrScan() {
   return (
     <View style={styles.container}>
       <View style={styles.scannerWrapper}>
-        <CameraView
-          ref={cameraRef}
-          style={StyleSheet.absoluteFillObject}
-          // restrict to QR codes only
-          barcodeScannerSettings={{
-            barcodeTypes: ["qr"],
-          }}
-          onBarcodeScanned={handleBarCodeScanned}
-        />
+        {isFocused && (
+          <CameraView
+            ref={cameraRef}
+            style={StyleSheet.absoluteFillObject}
+            onBarcodeScanned={handleBarCodeScanned}
+            barcodeScannerSettings={{
+              barcodeTypes: ["qr"],
+            }}
+          />
+        )}
 
         {/* top overlay */}
         <View style={styles.overlayTop}>
@@ -117,12 +135,12 @@ export default function QrScan() {
           </Text>
         </View>
 
-        {/* center crosshair / hint */}
+        {/* center crosshair */}
         <View pointerEvents="none" style={styles.centerOverlay}>
           <View style={styles.scanBox} />
         </View>
 
-        {/* bottom controls / status */}
+        {/* bottom status */}
         <View style={styles.bottomPanel}>
           {isScanning ? (
             <View style={styles.row}>
@@ -148,7 +166,6 @@ export default function QrScan() {
             >
               <Text style={styles.buttonText}>Rescan</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
               style={[styles.button, styles.cancelButton]}
               onPress={() => router.back()}
@@ -159,7 +176,7 @@ export default function QrScan() {
         </View>
       </View>
 
-      {/* result area */}
+      {/* result */}
       <View style={styles.resultContainer}>
         <Text style={styles.resultTitle}>Last scanned QR:</Text>
         <Text style={styles.resultText}>{lastQr ?? "-"}</Text>
@@ -181,7 +198,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#000",
   },
   scannerWrapper: { flex: 1, position: "relative" },
   overlayTop: {
@@ -231,9 +247,7 @@ const styles = StyleSheet.create({
     marginVertical: 6,
   },
   cancelButton: { backgroundColor: "#444" },
-  torchOn: { backgroundColor: "#FFD700" },
   buttonText: { color: "#fff", fontWeight: "600" },
-
   resultContainer: {
     padding: 12,
     borderTopWidth: 1,

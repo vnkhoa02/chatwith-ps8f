@@ -1,5 +1,5 @@
 import { AUTH_CONFIG } from "@/config/auth";
-import { KeyPair, signMessage as signEdMessage } from "@/utils/ed25519";
+import { KeyPair, signMessage } from "@/utils/ed25519";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useMutation } from "@tanstack/react-query";
 import nacl from "tweetnacl";
@@ -22,14 +22,6 @@ type ScanInput = {
   qrString: string;
   authToken?: string;
 };
-
-/** try a list of fields and return the first defined one */
-function pick(obj: any, ...keys: string[]) {
-  for (const k of keys) {
-    if (obj && typeof obj[k] !== "undefined") return obj[k];
-  }
-  return undefined;
-}
 
 async function postJson(url: string, body: any, token?: string) {
   const headers: Record<string, string> = {
@@ -118,11 +110,20 @@ export function useQrPairing() {
       } catch {
         parsed = { session_id: qrString };
       }
+      console.log("Parsed QR:", parsed);
+
       const sessionId = parsed.session_id;
       const serverPubFromQr = parsed.public_key;
-
       // 2) ensure X25519 (nacl.box) keypair
       const { secretKey, publicKeyBase64 } = await ensureX25519Keys();
+
+      console.log("payload", {
+        sessionId,
+        secretKey,
+        publicKeyBase64,
+        serverPubFromQr,
+        authToken,
+      });
 
       // 3) POST /device/qr/scan
       const scanResp = await postJson(
@@ -130,55 +131,16 @@ export function useQrPairing() {
         { session_id: sessionId, mobile_public_key: publicKeyBase64 },
         authToken
       );
+      console.log("Scan response:", scanResp);
 
-      // 4) normalize encrypted payload fields (try common variants)
-      const ciphertextB64 = pick(scanResp, "cipher");
-      const nonceB64 = pick(scanResp, "nonce", "iv", "nonce_b64", "n");
-      const serverPubB64 = pick(scanResp, "public_key") ?? serverPubFromQr;
-
-      // If server sent final/unencrypted payload
-      if (!ciphertextB64 || !nonceB64 || !serverPubB64) {
-        const final = pick(
-          scanResp,
-          "final_response",
-          "pairing",
-          "data",
-          "payload"
-        );
-        if (final) return { pairing: final, raw: scanResp };
-        throw new Error(
-          "Scan response missing encrypted payload or server public key"
-        );
-      }
-
-      // 5) decrypt using nacl.box.open
-      const ct = naclUtil.decodeBase64(String(ciphertextB64));
-      const nonce = naclUtil.decodeBase64(String(nonceB64));
-      const serverPub = naclUtil.decodeBase64(String(serverPubB64));
-
-      const plain = nacl.box.open(ct, nonce, serverPub, secretKey);
-      if (!plain) throw new Error("Failed to decrypt pairing response");
-      const decryptedText = naclUtil.encodeUTF8(plain);
-
-      // 6) parse decrypted payload
-      let pairingObj: any;
-      try {
-        pairingObj = JSON.parse(decryptedText);
-      } catch {
-        pairingObj = { text: decryptedText };
-      }
-
-      // 7) check if approval required (user_code present)
-      const userCode = pick(scanResp, "user_code") ?? pairingObj.user_code;
-      const challenge = pick(scanResp, "challenge") ?? pairingObj.challenge;
+      const userCode = scanResp?.user_code;
 
       if (userCode) {
-        // load Ed25519 keypair (must be persisted earlier by your auth flow)
+        // load Ed25519 keypair
         const edKey = await loadEdKeyPair();
-        const whatToSign = String(challenge ?? userCode);
-        // signEdMessage may be sync — wrap with Promise.resolve to support either
+        const whatToSign = String(userCode);
         const signatureBase64 = await Promise.resolve(
-          signEdMessage(whatToSign, edKey.privateKey)
+          signMessage(whatToSign, edKey.privateKey)
         );
 
         // send approve
@@ -187,10 +149,10 @@ export function useQrPairing() {
           { mobile_signature: signatureBase64 },
           authToken
         );
-        return { pairing: pairingObj, approve: approveResp, raw: scanResp };
+        return { approve: approveResp, raw: scanResp };
       }
 
-      return { pairing: pairingObj, raw: scanResp };
+      return { raw: scanResp };
     },
   });
 
