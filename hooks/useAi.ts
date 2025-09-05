@@ -3,7 +3,8 @@ import { useMutation } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { AUTH_CONFIG } from "../config/auth";
 
-const BASE_URL = process.env.EXPO_P8_FS_API || "https://p8fs.percolationlabs.ai";
+const BASE_URL =
+  process.env.EXPO_P8_FS_API || "https://p8fs.percolationlabs.ai";
 const API_URL = `${BASE_URL}/api/v1/chat/completions`;
 
 type Role = "system" | "user" | "assistant";
@@ -11,6 +12,7 @@ type Role = "system" | "user" | "assistant";
 export interface Message {
   role: Role;
   content: string;
+  imageUrls?: string[]; // optional image URL
   isAudio?: boolean; // mark if the message is audio
 }
 
@@ -32,14 +34,16 @@ export function useAi() {
   const chatMutation = useMutation({
     mutationFn: async ({
       userMessage,
+      imageUrls,
       isAudio = false,
     }: {
       userMessage: string;
+      imageUrls?: string[];
       isAudio: boolean;
     }) => {
       const newMessages = [
         ...messages,
-        { role: "user" as const, content: userMessage },
+        { role: "user" as const, content: userMessage, imageUrls },
       ];
       setMessages(newMessages);
 
@@ -103,8 +107,8 @@ export function useAi() {
   return {
     messages,
     isStreaming,
-    sendMessage: (msg: string) =>
-      chatMutation.mutateAsync({ userMessage: msg, isAudio: false }),
+    sendMessage: (msg: string, imageUrls: string[]) =>
+      chatMutation.mutateAsync({ userMessage: msg, imageUrls, isAudio: false }),
     sendAudioMessage: (base64Audio: string) =>
       chatMutation.mutateAsync({ userMessage: base64Audio, isAudio: true }),
     stop,

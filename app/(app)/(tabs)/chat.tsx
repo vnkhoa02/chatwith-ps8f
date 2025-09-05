@@ -7,7 +7,9 @@ import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
+  Image,
   StyleSheet,
   Text,
   TextInput,
@@ -25,6 +27,7 @@ export default function Chat() {
     fileName,
     fileSize,
     pickImage,
+    isUploading,
   } = useChat();
 
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
@@ -54,12 +57,15 @@ export default function Chat() {
   const handleSend = async () => {
     if (!message.trim()) return;
     resetInput();
-    await sendMessage(message);
+    if (mediaUri) {
+      await sendMessage(message, [mediaUri]);
+    } else {
+      await sendMessage(message, []);
+    }
   };
 
   const startRecording = async () => {
     try {
-      console.log("Starting recording…");
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
@@ -76,17 +82,14 @@ export default function Chat() {
   };
 
   const stopRecording = async () => {
-    console.log("Stopping recording…");
     if (!recording) return;
     setIsRecording(false);
 
     try {
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
-      console.log("Recording saved at", uri);
 
       if (uri) {
-        // convert to base64
         const base64Audio = await FileSystem.readAsStringAsync(uri, {
           encoding: FileSystem.EncodingType.Base64,
         });
@@ -104,6 +107,24 @@ export default function Chat() {
     <View style={styles.container}>
       {/* Chat messages */}
       <ChatMessages messages={messages} />
+
+      {/* Image preview with upload indicator */}
+      {mediaUri && (
+        <View style={styles.previewContainer}>
+          <Image source={{ uri: mediaUri }} style={styles.previewImage} />
+          <View style={styles.previewTextContainer}>
+            <Text style={styles.previewText} numberOfLines={1}>
+              {fileName ?? mediaUri.split("/").pop()}
+            </Text>
+            {fileSize && (
+              <Text style={styles.previewSubText}>
+                {(fileSize / 1024).toFixed(1)} KB
+              </Text>
+            )}
+          </View>
+          {isUploading && <ActivityIndicator size="small" color="#0A84FF" />}
+        </View>
+      )}
 
       {/* Input bar */}
       <View style={styles.inputContainer}>
@@ -134,17 +155,6 @@ export default function Chat() {
           <Ionicons name="send-outline" size={22} color="#FFF" />
         </TouchableOpacity>
       </View>
-
-      {mediaUri && (
-        <Text
-          style={styles.mediaPreview}
-          numberOfLines={1}
-          ellipsizeMode="middle"
-        >
-          Selected: {fileName ?? mediaUri.split("/").pop()}
-          {fileSize ? ` — ${(fileSize / 1024).toFixed(1)} KB` : ""}
-        </Text>
-      )}
     </View>
   );
 }
@@ -156,6 +166,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-end",
     padding: 0,
+  },
+  previewContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 8,
+    backgroundColor: "#111",
+    borderRadius: 8,
+    marginHorizontal: 8,
+    marginBottom: 6,
+  },
+  previewImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  previewTextContainer: {
+    flex: 1,
+  },
+  previewText: {
+    color: "#fff",
+    fontSize: 14,
+  },
+  previewSubText: {
+    color: "#888",
+    fontSize: 12,
   },
   inputContainer: {
     flexDirection: "row",
@@ -183,10 +219,5 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     backgroundColor: "#0A84FF",
     borderRadius: 6,
-  },
-  mediaPreview: {
-    color: "#BBB",
-    marginTop: 10,
-    width: "100%",
   },
 });

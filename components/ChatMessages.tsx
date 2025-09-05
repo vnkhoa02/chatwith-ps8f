@@ -4,6 +4,7 @@ import { Audio } from "expo-av";
 import React, { useState } from "react";
 import {
   FlatList,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -18,13 +19,15 @@ export default function ChatMessages({ messages }: Props) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
 
-  const isBase64Audio = (str: string) => {
-    return /^[A-Za-z0-9+/=]+$/.test(str) && str.length > 100;
-  };
+  const isBase64Audio = (str: string) =>
+    /^[A-Za-z0-9+/=]+$/.test(str) && str.length > 100;
+
+  const isImageUrl = (str: string) =>
+    /^https?:\/\/.+\.(png|jpg|jpeg|gif|webp)$/i.test(str) ||
+    str.startsWith("file://");
 
   const playAudio = async (base64: string, index: number) => {
     try {
-      // Stop existing sound if already playing
       if (sound) {
         await sound.stopAsync();
         await sound.unloadAsync();
@@ -36,7 +39,6 @@ export default function ChatMessages({ messages }: Props) {
         }
       }
 
-      // 🔹 Ensure audio mode is set
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
         playsInSilentModeIOS: true,
@@ -45,7 +47,6 @@ export default function ChatMessages({ messages }: Props) {
         playThroughEarpieceAndroid: false,
       });
 
-      // Write base64 to a file (try .caf for iOS, .m4a for Android)
       const FileSystem = await import("expo-file-system");
       const path = `${FileSystem.cacheDirectory}temp-audio-${index}.m4a`;
 
@@ -55,10 +56,7 @@ export default function ChatMessages({ messages }: Props) {
 
       const { sound: newSound } = await Audio.Sound.createAsync(
         { uri: path },
-        {
-          shouldPlay: true,
-          volume: 1.0, // 🔊 ensure audible
-        }
+        { shouldPlay: true, volume: 1.0 }
       );
 
       setSound(newSound);
@@ -120,11 +118,28 @@ export default function ChatMessages({ messages }: Props) {
                 {item.content}
               </Text>
             )}
+
+            {/* 🔹 Inline image preview */}
+            {item?.imageUrls && (
+              <FlatList
+                data={item.imageUrls}
+                keyExtractor={(_, imgIndex) => imgIndex.toString()}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={{ marginTop: 8 }}
+                renderItem={({ item: imgUrl }) => (
+                  <Image
+                    source={{ uri: imgUrl }}
+                    style={styles.messageImage}
+                    resizeMode="cover"
+                  />
+                )}
+              />
+            )}
           </View>
         );
       }}
       inverted
-      ListFooterComponent={null}
       contentContainerStyle={styles.list}
     />
   );
@@ -141,7 +156,6 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     padding: 10,
     borderRadius: 12,
-    margin: 20,
   },
   userMessage: {
     alignSelf: "flex-end",
@@ -156,6 +170,7 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: 16,
     lineHeight: 20,
+    color: "#fff",
   },
   userMessageText: {
     color: "#fff",
@@ -170,5 +185,10 @@ const styles = StyleSheet.create({
   audioText: {
     color: "#fff",
     marginLeft: 8,
+  },
+  messageImage: {
+    marginTop: 8,
+    width: 250,
+    borderRadius: 8,
   },
 });
