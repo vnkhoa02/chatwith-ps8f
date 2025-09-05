@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { AUTH_CONFIG } from "../config/auth";
 
-const BASE_URL = process.env.P8_FS_API || "https://p8fs.percolationlabs.ai";
+const BASE_URL = process.env.EXPO_P8_FS_API || "https://p8fs.percolationlabs.ai";
 const API_URL = `${BASE_URL}/api/v1/chat/completions`;
 
 type Role = "system" | "user" | "assistant";

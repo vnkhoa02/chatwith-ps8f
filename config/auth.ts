@@ -1,5 +1,5 @@
 export const AUTH_CONFIG = {
-  BASE_URL: process.env.P8_FS_API ?? "https://p8fs.percolationlabs.ai",
+  BASE_URL: process.env.EXPO_P8_FS_API ?? "https://p8fs.percolationlabs.ai",
   STORAGE_KEYS: {
     ACCESS_TOKEN: "@auth:access_token",
     REFRESH_TOKEN: "@auth:refresh_token",

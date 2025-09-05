@@ -1,13 +1,15 @@
 import { AUTH_CONFIG } from "@/config/auth";
+import {
+  generatePresignedUrl,
+  parseJwt,
+  uploadToS3,
+} from "@/utils/s3UploadUtils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
 import { Alert } from "react-native";
 import * as mime from "react-native-mime-types";
-import * as tus from "tus-js-client";
-
-const API_BASE = process.env.P8_FS_API || "https://p8fs.percolationlabs.ai";
 
 const useChat = () => {
   const [message, setMessage] = useState("");
@@ -15,6 +17,7 @@ const useChat = () => {
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileSize, setFileSize] = useState<number | null>(null);
   const [uploadUrl, setUploadUrl] = useState<string | null>(null);
+  const [viewUrl, setViewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   // pick image
@@ -25,7 +28,7 @@ const useChat = () => {
         allowsEditing: false,
         quality: 1,
       });
-      console.log("ImagePicker result", result);
+
       if (!result.canceled && result.assets?.length > 0) {
         const asset = result.assets[0];
         setMediaUri(asset.uri);
@@ -35,7 +38,7 @@ const useChat = () => {
         setFileSize(info.exists ? info.size : null);
 
         // upload right after picking
-        await uploadImage(asset.uri);
+        await uploadImage(asset.uri, asset.fileName || "upload.jpg");
       }
     } catch (err) {
       console.warn("pickImage error", err);
@@ -43,58 +46,39 @@ const useChat = () => {
     }
   };
 
-  // upload with tus
-  const uploadImage = async (uri: string) => {
+  // upload to S3 with AWS V4
+  const uploadImage = async (uri: string, name: string) => {
     try {
       setIsUploading(true);
+
       const token = await AsyncStorage.getItem(
         AUTH_CONFIG.STORAGE_KEYS.ACCESS_TOKEN
       );
+      if (!token) throw new Error("No access token");
+
       const mimeType = mime.lookup(uri) || "application/octet-stream";
-      const fileInfo = await FileSystem.getInfoAsync(uri);
-      if (!fileInfo.exists) throw new Error("File not found");
 
-      const file = {
-        size: fileInfo.size!,
-        uri,
-        type: mimeType,
-        name: fileName || "upload.jpg",
-      };
+      // 🔹 upload
+      const result = await uploadToS3(uri, name, mimeType, token);
 
-      const upload = new tus.Upload(file as any, {
-        endpoint: `${API_BASE}/tus/`,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        metadata: {
-          filename: file.name,
-          filetype: file.type,
-        },
-        uploadSize: file.size,
-        onError: (error) => {
-          console.error("Upload failed:", error);
-          Alert.alert("Upload failed", error.message);
-          setIsUploading(false);
-        },
-        onProgress: (bytesUploaded, bytesTotal) => {
-          console.log(
-            `Uploaded ${bytesUploaded} of ${bytesTotal} bytes (${(
-              (bytesUploaded / bytesTotal) *
-              100
-            ).toFixed(2)}%)`
-          );
-        },
-        onSuccess: () => {
-          console.log("Upload finished:", upload.url);
-          setUploadUrl(upload.url || null);
-          setIsUploading(false);
-        },
+      setUploadUrl(result.url);
+
+      // 🔹 presigned view URL
+      const { tenant_id } = parseJwt(token);
+      const presigned = generatePresignedUrl({
+        bucket: tenant_id,
+        key: result.key,
+        expiresIn: 600, // 10 min
       });
 
-      upload.start();
+      setViewUrl(presigned);
+
+      console.log("✅ Upload finished:", result.url);
+      console.log("🔗 Presigned view URL:", presigned);
     } catch (err: any) {
       console.error("uploadImage error", err);
       Alert.alert("Upload error", err?.message ?? String(err));
+    } finally {
       setIsUploading(false);
     }
   };
@@ -105,6 +89,7 @@ const useChat = () => {
     setFileName(null);
     setFileSize(null);
     setUploadUrl(null);
+    setViewUrl(null);
   };
 
   return {
@@ -114,6 +99,7 @@ const useChat = () => {
     fileName,
     fileSize,
     uploadUrl,
+    viewUrl,
     isUploading,
     pickImage,
     resetInput,
