@@ -1,5 +1,6 @@
+import "react-native-get-random-values";
 import nacl from "tweetnacl";
-import * as naclUtil from "tweetnacl-util";
+import naclUtil from "tweetnacl-util";
 
 export type KeyPair = {
   privateKey: Uint8Array;

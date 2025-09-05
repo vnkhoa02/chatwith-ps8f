@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import AntDesign from "@expo/vector-icons/AntDesign";
 import { Tabs } from "expo-router";
 
 export default function TabsLayout() {
@@ -14,11 +15,11 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="feed"
+        name="qr-scan"
         options={{
-          title: "Feed",
+          title: "QR Scan",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="list-outline" size={size} color={color} />
+            <AntDesign name="qrcode" size={size} color={color} />
           ),
         }}
       />
