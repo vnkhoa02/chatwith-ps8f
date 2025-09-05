@@ -18,11 +18,6 @@ type QrCreate = {
   expires_in?: number;
 };
 
-type ScanInput = {
-  qrString: string;
-  authToken?: string;
-};
-
 async function postJson(url: string, body: any, token?: string) {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -99,9 +94,13 @@ async function loadEdKeyPair(): Promise<KeyPair> {
  */
 export function useQrPairing() {
   const scanMutation = useMutation({
-    mutationFn: async (input: ScanInput) => {
-      const { qrString, authToken } = input;
-
+    mutationFn: async (qrString: string) => {
+      const authToken = await AsyncStorage.getItem(
+        AUTH_CONFIG.STORAGE_KEYS.ACCESS_TOKEN
+      );
+      if (!authToken) {
+        throw new Error("No auth token found. Please log in.");
+      }
       // 1) parse QR payload (JSON with session_id/public_key OR just a session_id string)
       let parsed: QrCreate;
       try {

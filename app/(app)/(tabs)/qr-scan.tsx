@@ -1,6 +1,4 @@
-import { AUTH_CONFIG } from "@/config/auth";
 import { useQrPairing } from "@/hooks/useQrPairing";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useIsFocused } from "@react-navigation/native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRouter } from "expo-router";
@@ -72,14 +70,7 @@ export default function QrScan() {
 
       (async () => {
         try {
-          const token = await AsyncStorage.getItem(
-            AUTH_CONFIG.STORAGE_KEYS.ACCESS_TOKEN
-          );
-
-          const result = await scan({
-            qrString: data,
-            authToken: token ?? undefined,
-          });
+          const result = await scan(data);
           setPairResult(result);
           Alert.alert("Paired", "Pairing successful.");
         } catch (err: any) {
