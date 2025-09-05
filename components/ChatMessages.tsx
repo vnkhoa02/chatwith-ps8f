@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import {
   FlatList,
   Image,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -22,10 +23,6 @@ export default function ChatMessages({ messages }: Props) {
   const isBase64Audio = (str: string) =>
     /^[A-Za-z0-9+/=]+$/.test(str) && str.length > 100;
 
-  const isImageUrl = (str: string) =>
-    /^https?:\/\/.+\.(png|jpg|jpeg|gif|webp)$/i.test(str) ||
-    str.startsWith("file://");
-
   const playAudio = async (base64: string, index: number) => {
     try {
       if (sound) {
@@ -42,9 +39,6 @@ export default function ChatMessages({ messages }: Props) {
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
         playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
       });
 
       const FileSystem = await import("expo-file-system");
@@ -79,6 +73,11 @@ export default function ChatMessages({ messages }: Props) {
     <FlatList
       data={[...messages].reverse().filter((m) => m.role !== "system")}
       keyExtractor={(_, index) => index.toString()}
+      inverted
+      nestedScrollEnabled
+      contentContainerStyle={styles.list}
+      contentInset={{ bottom: 400 }} // space for input bar
+      contentInsetAdjustmentBehavior="automatic"
       renderItem={({ item, index }) => {
         const isAudio = isBase64Audio(item.content);
         const isThisPlaying = playingIndex === index;
@@ -119,28 +118,27 @@ export default function ChatMessages({ messages }: Props) {
               </Text>
             )}
 
-            {/* 🔹 Inline image preview */}
-            {item?.imageUrls && (
-              <FlatList
-                data={item.imageUrls}
-                keyExtractor={(_, imgIndex) => imgIndex.toString()}
+            {/* 🔹 Inline image preview (use ScrollView instead of FlatList) */}
+            {item?.imageUrls && item.imageUrls.length > 0 && (
+              <ScrollView
                 horizontal
+                nestedScrollEnabled
                 showsHorizontalScrollIndicator={false}
-                style={{ marginTop: 8 }}
-                renderItem={({ item: imgUrl }) => (
+                style={{ marginTop: 8, maxHeight: 250 }}
+              >
+                {item.imageUrls.map((imgUrl, i) => (
                   <Image
+                    key={i}
                     source={{ uri: imgUrl }}
                     style={styles.messageImage}
                     resizeMode="cover"
                   />
-                )}
-              />
+                ))}
+              </ScrollView>
             )}
           </View>
         );
       }}
-      inverted
-      contentContainerStyle={styles.list}
     />
   );
 }
@@ -171,6 +169,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 20,
     color: "#fff",
+    flexShrink: 1, // ✅ prevent overflow on long text
   },
   userMessageText: {
     color: "#fff",
@@ -181,13 +180,14 @@ const styles = StyleSheet.create({
   audioBox: {
     flexDirection: "row",
     alignItems: "center",
+    width: 250,
   },
   audioText: {
     color: "#fff",
     marginLeft: 8,
   },
   messageImage: {
-    marginTop: 8,
+    marginRight: 8,
     width: 250,
     borderRadius: 8,
   },

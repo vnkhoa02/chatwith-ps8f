@@ -71,9 +71,14 @@ export default function Chat() {
         playsInSilentModeIOS: true,
       });
 
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
+      const { recording } = await Audio.Recording.createAsync({
+        ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+        ios: {
+          ...Audio.RecordingOptionsPresets.HIGH_QUALITY.ios,
+          extension: ".m4a",
+          // outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
+        },
+      });
       setRecording(recording);
       setIsRecording(true);
     } catch (err) {
