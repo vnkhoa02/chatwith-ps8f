@@ -1,10 +1,29 @@
 import { Ionicons } from "@expo/vector-icons";
-import AntDesign from "@expo/vector-icons/AntDesign";
 import { Tabs } from "expo-router";
+import React from "react";
+import { Platform } from "react-native";
 
 export default function TabsLayout() {
   return (
-    <Tabs>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: "#10B981", // green
+        tabBarInactiveTintColor: "#E5E7EB", // light text for inactive
+        tabBarStyle: {
+          backgroundColor: "#171717",
+          borderTopColor: "#374151",
+          borderTopWidth: 1,
+          height: Platform.OS === "ios" ? 86 : 72,
+          paddingBottom: Platform.OS === "ios" ? 18 : 8,
+          paddingTop: 8,
+        },
+        tabBarShowLabel: true,
+        tabBarLabelStyle: {
+          fontSize: 12,
+        },
+      }}
+    >
       <Tabs.Screen
         name="chat"
         options={{
@@ -14,15 +33,37 @@ export default function TabsLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
-        name="qr-scan"
+        name="memos"
         options={{
-          title: "QR Scan",
+          title: "Memos",
           tabBarIcon: ({ color, size }) => (
-            <AntDesign name="qrcode" size={size} color={color} />
+            <Ionicons name="mic-outline" size={size} color={color} />
           ),
         }}
       />
+
+      <Tabs.Screen
+        name="moments"
+        options={{
+          title: "Moments",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="time-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="feed"
+        options={{
+          title: "Feed",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
       <Tabs.Screen
         name="settings"
         options={{
