@@ -1,4 +1,4 @@
-import { AntDesign } from "@expo/vector-icons";
+import { AntDesign, Feather, FontAwesome5 } from "@expo/vector-icons";
 import React from "react";
 import {
   GestureResponderEvent,
@@ -27,10 +27,11 @@ const Section: React.FC<SectionProps> = ({ title, children }) => (
 type ItemProps = {
   label: string;
   rightText?: string;
+  icon?: React.ReactNode;
   onPress?: (e: GestureResponderEvent) => void;
 };
 
-const Item: React.FC<ItemProps> = ({ label, rightText, onPress }) => {
+const Item: React.FC<ItemProps> = ({ label, rightText, icon, onPress }) => {
   return (
     <Pressable
       onPress={onPress}
@@ -44,7 +45,13 @@ const Item: React.FC<ItemProps> = ({ label, rightText, onPress }) => {
       <View style={styles.itemLeft}>
         {/* placeholder icon */}
         <View style={styles.iconPlaceholder}>
-          <View style={styles.iconInner} />
+          <View style={styles.iconInner}>
+            {icon ? (
+              icon
+            ) : (
+              <AntDesign name="question" size={22} color="white" />
+            )}
+          </View>
         </View>
 
         <Text style={styles.itemLabel}>{label}</Text>
@@ -95,26 +102,77 @@ const SettingsScreen: React.FC = () => {
         </View>
 
         <Section title="General">
-          <Item label="Chat History" onPress={() => {}} />
-          <Item label="Memos" onPress={() => {}} />
-          <Item label="Moments" onPress={() => {}} />
+          <Item
+            label="Chat History"
+            icon={<AntDesign name="message1" size={22} color="white" />}
+            onPress={() => {}}
+          />
+          <Item
+            label="Memos"
+            icon={<FontAwesome5 name="microphone" size={22} color="white" />}
+            onPress={() => {}}
+          />
+          <Item
+            label="Moments"
+            icon={<AntDesign name="clockcircle" size={22} color="white" />}
+            onPress={() => {}}
+          />
+          <Item
+            label="Linked Devices"
+            icon={<AntDesign name="qrcode" size={22} color="white" />}
+            onPress={() => {}}
+          />
         </Section>
 
         <Section title="Preferences">
-          <Item label="Notifications" onPress={() => {}} />
-          <Item label="Theme" rightText="Dark" onPress={() => {}} />
-          <Item label="Language" rightText="English" onPress={() => {}} />
+          <Item
+            label="Notifications"
+            icon={<AntDesign name="bells" size={22} color="white" />}
+            onPress={() => {}}
+          />
+          <Item
+            label="Theme"
+            rightText="Dark"
+            icon={<AntDesign name="skin" size={22} color="white" />}
+            onPress={() => {}}
+          />
+          <Item
+            label="Language"
+            rightText="English"
+            icon={<Feather name="globe" size={22} color="white" />}
+            onPress={() => {}}
+          />
         </Section>
 
         <Section title="Privacy & Security">
-          <Item label="Privacy" onPress={() => {}} />
-          <Item label="Data Export" onPress={() => {}} />
+          <Item
+            label="Privacy"
+            icon={<AntDesign name="lock1" size={18} color="white" />}
+            onPress={() => {}}
+          />
+          <Item
+            label="Data Export"
+            icon={<AntDesign name="export" size={18} color="white" />}
+            onPress={() => {}}
+          />
         </Section>
 
         <Section title="Support">
-          <Item label="Help & FAQ" onPress={() => {}} />
-          <Item label="Contact Support" onPress={() => {}} />
-          <Item label="Rate App" onPress={() => {}} />
+          <Item
+            label="Help & FAQ"
+            icon={<AntDesign name="questioncircleo" size={18} color="white" />}
+            onPress={() => {}}
+          />
+          <Item
+            label="Contact Support"
+            icon={<AntDesign name="customerservice" size={18} color="white" />}
+            onPress={() => {}}
+          />
+          <Item
+            label="Rate App"
+            icon={<AntDesign name="staro" size={18} color="white" />}
+            onPress={() => {}}
+          />
         </Section>
 
         <View style={styles.signOutWrap}>
@@ -258,9 +316,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   iconInner: {
-    width: 14,
-    height: 14,
-    borderRadius: 3,
+    padding: 4,
+    borderRadius: 4,
     backgroundColor: "#10A37F",
   },
   itemLabel: {
