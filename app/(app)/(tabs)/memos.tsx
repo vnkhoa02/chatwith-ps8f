@@ -1,10 +1,11 @@
+import { StatusBar } from "expo-status-bar";
 import React from "react";
-import { SafeAreaView, StatusBar, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView, StyleSheet, Text, View } from "react-native";
 
 const MemosScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#171717" />
+      <StatusBar style="auto" />
       <View style={styles.container}>
         <Text style={styles.title}>Memos</Text>
         <Text style={styles.subtitle}>

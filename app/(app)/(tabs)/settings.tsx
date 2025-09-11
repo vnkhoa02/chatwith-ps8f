@@ -1,4 +1,5 @@
 import { AntDesign, Feather, FontAwesome5 } from "@expo/vector-icons";
+import { StatusBar } from "expo-status-bar";
 import React from "react";
 import {
   GestureResponderEvent,
@@ -6,7 +7,6 @@ import {
   Pressable,
   SafeAreaView,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   View,
@@ -71,7 +71,7 @@ const Item: React.FC<ItemProps> = ({ label, rightText, icon, onPress }) => {
 const SettingsScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#171717" />
+      <StatusBar style="light" />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Settings</Text>
       </View>
@@ -193,7 +193,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#202123",
   },
   header: {
-    height: 85,
+    marginTop: 24,
+    height: 60,
     backgroundColor: "#171717",
     borderBottomColor: "#374151",
     borderBottomWidth: 1,
