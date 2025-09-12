@@ -1,4 +1,5 @@
 import MomentCard from "@/components/MomentCard";
+import SharedHeader from "@/components/SharedHeader";
 import { moments } from "@/mock/momentsData";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
@@ -7,9 +8,7 @@ import {
   FlatList,
   SafeAreaView,
   StyleSheet,
-  Text,
   TouchableOpacity,
-  View,
 } from "react-native";
 
 const MomentsScreen: React.FC = () => {
@@ -17,20 +16,24 @@ const MomentsScreen: React.FC = () => {
     <SafeAreaView style={styles.safe}>
       <StatusBar style="dark" />
 
-      <View style={styles.header}>
-        <Text style={styles.heading}>Todays Moments</Text>
-        <Text style={styles.subheading}>Your daily activity feed</Text>
-
-        <TouchableOpacity
-          style={styles.uploadButton}
-          onPress={() => {
-            // TODO: wire upload action
-          }}
-          accessibilityLabel="Upload"
-        >
-          <Ionicons name="cloud-upload-outline" size={20} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      <SharedHeader
+        title="Todays Moments"
+        subtitle="Your daily activity feed"
+        customStyle={{
+          backgroundColor: "#FFFFFF",
+        }}
+        rightAction={
+          <TouchableOpacity
+            style={styles.uploadAction}
+            onPress={() => {
+              // TODO: wire upload action
+            }}
+            accessibilityLabel="Upload"
+          >
+            <Ionicons name="cloud-upload-outline" size={20} color="#fff" />
+          </TouchableOpacity>
+        }
+      />
 
       <FlatList
         contentContainerStyle={styles.listContent}
@@ -57,14 +60,6 @@ export default MomentsScreen;
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    marginTop: 24,
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 8,
-  },
-  heading: { fontSize: 22, fontWeight: "800", color: "#0F172A" },
-  subheading: { marginTop: 6, color: "#64748B" },
   listContent: { padding: 16, paddingBottom: 120 },
   uploadButton: {
     position: "absolute",
@@ -81,5 +76,19 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
+  },
+  uploadAction: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#EF4444",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
 });

@@ -1,3 +1,4 @@
+import SharedHeader from "@/components/SharedHeader";
 import { AntDesign, Feather, FontAwesome5 } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
@@ -58,9 +59,7 @@ const Item: React.FC<ItemProps> = ({ label, rightText, icon, onPress }) => {
       </View>
 
       <View style={styles.itemRight}>
-        {rightText ? (
-          <Text style={styles.itemRightText}>{rightText}</Text>
-        ) : null}
+        {rightText && <Text style={styles.itemRightText}>{rightText}</Text>}
 
         <AntDesign name="right" size={18} color="white" />
       </View>
@@ -72,9 +71,7 @@ const SettingsScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar style="light" />
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Settings</Text>
-      </View>
+      <SharedHeader title="Settings" customTitleStyle={{ color: "#FFFFFF" }} />
 
       <ScrollView
         contentContainerStyle={styles.container}
@@ -192,21 +189,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#202123",
   },
-  header: {
-    marginTop: 24,
-    height: 60,
-    backgroundColor: "#171717",
-    borderBottomColor: "#374151",
-    borderBottomWidth: 1,
-    justifyContent: "center",
-    paddingHorizontal: 16,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-
   container: {
     paddingHorizontal: 16,
     paddingTop: 16,
