@@ -36,7 +36,7 @@ const useAuth = () => {
         setState({ isAuthenticated: true, accessToken: token });
       } else {
         await clearStoredTokens();
-        setState({ isAuthenticated: true, accessToken: null });
+        setState({ isAuthenticated: false, accessToken: null });
       }
 
       if (!priv || !pub) {

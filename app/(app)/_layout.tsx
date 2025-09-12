@@ -10,6 +10,12 @@ export default function AppLayout() {
           presentation: "modal",
         }}
       />
+      <Stack.Screen
+        name="qr_scan"
+        options={{
+          presentation: "modal",
+        }}
+      />
       <Stack.Screen name="(tabs)" />
     </Stack>
   );
