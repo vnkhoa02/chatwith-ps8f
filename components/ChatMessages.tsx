@@ -71,13 +71,14 @@ export default function ChatMessages({ messages }: Props) {
 
   return (
     <FlatList
-      data={[...messages].reverse().filter((m) => m.role !== "system")}
-      keyExtractor={(_, index) => index.toString()}
-      inverted
-      nestedScrollEnabled
+      data={messages.filter((m) => m.role !== "system")}
+      keyExtractor={(item, index) => String((item as any).id ?? index)}
+      nestedScrollEnabled={true}
       contentContainerStyle={styles.list}
-      contentInset={{ bottom: 400 }} // space for input bar
+      maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+      keyboardShouldPersistTaps="handled"
       contentInsetAdjustmentBehavior="automatic"
+      style={{ flex: 1 }}
       renderItem={({ item, index }) => {
         const isAudio = isBase64Audio(item.content);
         const isThisPlaying = playingIndex === index;
@@ -145,12 +146,11 @@ export default function ChatMessages({ messages }: Props) {
 
 const styles = StyleSheet.create({
   list: {
-    paddingBottom: 60,
     paddingVertical: 10,
     paddingHorizontal: 12,
   },
   messageContainer: {
-    maxWidth: "90%",
+    maxHeight: 9999,
     marginVertical: 6,
     padding: 10,
     borderRadius: 12,
