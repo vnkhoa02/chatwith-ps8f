@@ -1,5 +1,6 @@
 import SharedHeader from "@/components/SharedHeader";
 import { AntDesign, Feather, FontAwesome5 } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
 import {
@@ -68,6 +69,8 @@ const Item: React.FC<ItemProps> = ({ label, rightText, icon, onPress }) => {
 };
 
 const SettingsScreen: React.FC = () => {
+  const router = useRouter();
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar style="light" />
@@ -117,7 +120,7 @@ const SettingsScreen: React.FC = () => {
           <Item
             label="Linked Devices"
             icon={<AntDesign name="qrcode" size={22} color="white" />}
-            onPress={() => {}}
+            onPress={() => router.push("/qr_scan")}
           />
         </Section>
 
