@@ -1,10 +1,13 @@
 import ChatMessages from "@/components/ChatMessages";
+import SharedHeader from "@/components/SharedHeader";
 import { useAi } from "@/hooks/useAi";
 import useChat from "@/hooks/useChat";
 import { Ionicons } from "@expo/vector-icons";
 import { Audio } from "expo-av";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -18,6 +21,7 @@ import {
 } from "react-native";
 
 export default function Chat() {
+  const router = useRouter();
   const { messages, sendMessage, sendAudioMessage } = useAi();
   const {
     message,
@@ -110,6 +114,28 @@ export default function Chat() {
 
   return (
     <View style={styles.container}>
+      <StatusBar style="dark" />
+      <SharedHeader
+        title="Chat"
+        customStyle={{ backgroundColor: "#FFFFFF" }}
+        rightAction={
+          <View style={{ flexDirection: "row" }}>
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => router.push("/chat_history")}
+              accessibilityLabel="Chat history"
+            >
+              <Ionicons name="time-outline" size={24} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.iconBtn}
+              accessibilityLabel="New chat"
+            >
+              <Ionicons name="add-outline" size={24} />
+            </TouchableOpacity>
+          </View>
+        }
+      />
       {/* Chat messages */}
       <ChatMessages messages={messages} />
 
@@ -167,16 +193,11 @@ export default function Chat() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    padding: 0,
   },
   previewContainer: {
     flexDirection: "row",
     alignItems: "center",
     padding: 8,
-    backgroundColor: "#111",
     borderRadius: 8,
     marginHorizontal: 8,
     marginBottom: 6,
@@ -201,9 +222,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    width: "100%",
     backgroundColor: "#222",
-    borderRadius: 8,
     paddingVertical: 6,
     paddingHorizontal: 8,
   },
@@ -225,4 +244,5 @@ const styles = StyleSheet.create({
     backgroundColor: "#0A84FF",
     borderRadius: 6,
   },
+  iconBtn: { paddingHorizontal: 8, marginTop: 8 },
 });
