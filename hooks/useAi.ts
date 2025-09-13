@@ -47,7 +47,6 @@ export function useAi() {
       ];
       setMessages(newMessages);
 
-      // ✅ keep system + last 2 exchanges (user+assistant) + new user message
       const contextMessages = [
         newMessages[0], // system
         ...newMessages.slice(-3),
@@ -92,10 +91,15 @@ export function useAi() {
       }
 
       const assistantMessage = data.choices?.[0]?.message?.content || "";
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: assistantMessage },
-      ]);
+      const assistantMsg = {
+        role: "assistant" as const,
+        content: assistantMessage,
+      };
+      const updatedMessages = [...newMessages, assistantMsg];
+      setMessages(updatedMessages);
+
+      // return the updated messages so callers can await the assistant response
+      return updatedMessages;
     },
   });
 
@@ -107,6 +111,7 @@ export function useAi() {
   return {
     messages,
     isStreaming,
+    isLoading: chatMutation.isPending,
     sendMessage: (msg: string, imageUrls: string[]) =>
       chatMutation.mutateAsync({ userMessage: msg, imageUrls, isAudio: false }),
     sendAudioMessage: (base64Audio: string) =>
