@@ -1,3 +1,4 @@
+import useMessageStore from "@/stores/messageStore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useMutation } from "@tanstack/react-query";
 import { useRef, useState } from "react";
@@ -17,9 +18,7 @@ export interface Message {
 }
 
 export function useAi() {
-  const [messages, setMessages] = useState<Message[]>([
-    { role: "system", content: "You are a helpful assistant." },
-  ]);
+  const { messages, setMessages } = useMessageStore();
   const [isStreaming, setIsStreaming] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
 

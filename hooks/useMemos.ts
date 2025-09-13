@@ -78,8 +78,8 @@ export function useMemos() {
         // sendAudioMessage now returns the updated messages array from useAi
         setIsSending(true);
         try {
-          const updated = await sendAudioMessage(base64Audio);
-          return { duration, uri: uri ?? undefined, messages: updated } as any;
+          const messages = await sendAudioMessage(base64Audio);
+          return { duration, uri: uri ?? undefined, messages };
         } finally {
           setIsSending(false);
         }

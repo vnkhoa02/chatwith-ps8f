@@ -4,6 +4,7 @@ import { useMemos } from "@/hooks/useMemos";
 import { memos as mockMemos } from "@/mock/memosData";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
+import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
@@ -27,6 +28,7 @@ const MemosScreen: React.FC = () => {
     uploadFile,
     isSending,
   } = useMemos();
+  const router = useRouter();
 
   function handleDelete(id: string) {
     Alert.alert("Delete memo?", "Are you sure you want to delete this memo?", [
@@ -42,7 +44,7 @@ const MemosScreen: React.FC = () => {
   async function handleRecording() {
     if (isRecording) {
       const result = await stopRecording();
-      const latestMessage = (result?.messages as any[] | undefined)
+      const latestMessage = result?.messages
         ?.filter((m) => m.role === "assistant")
         .pop();
       if (result) {
@@ -56,6 +58,9 @@ const MemosScreen: React.FC = () => {
           tags: [],
         };
         setMemosList((prev) => [newMemo, ...prev]);
+        if (result?.messages) {
+          router.push("/chat");
+        }
       }
     } else {
       await startRecording();
@@ -86,6 +91,9 @@ const MemosScreen: React.FC = () => {
             tags: [],
           };
           setMemosList((prev) => [newMemo, ...prev]);
+          if (response?.messages) {
+            router.push("/chat");
+          }
         }
       }
     } catch (err) {
