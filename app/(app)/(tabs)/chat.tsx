@@ -75,14 +75,7 @@ export default function Chat() {
         playsInSilentModeIOS: true,
       });
 
-      const { recording } = await Audio.Recording.createAsync({
-        ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
-        ios: {
-          ...Audio.RecordingOptionsPresets.HIGH_QUALITY.ios,
-          extension: ".m4a",
-          // outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
-        },
-      });
+      const { recording } = await Audio.Recording.createAsync();
       setRecording(recording);
       setIsRecording(true);
     } catch (err) {
@@ -212,7 +205,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   previewText: {
-    color: "#fff",
+    color: "#000000ff",
     fontSize: 14,
   },
   previewSubText: {
