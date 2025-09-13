@@ -3,9 +3,11 @@ import SharedHeader from "@/components/SharedHeader";
 import { useMemos } from "@/hooks/useMemos";
 import { memos as mockMemos } from "@/mock/memosData";
 import { Ionicons } from "@expo/vector-icons";
+import * as DocumentPicker from "expo-document-picker";
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   SafeAreaView,
@@ -19,10 +21,11 @@ const MemosScreen: React.FC = () => {
   const [memosList, setMemosList] = useState(mockMemos);
   const {
     isRecording,
-    isLoading,
     elapsedSeconds,
     startRecording,
     stopRecording,
+    uploadFile,
+    isSending,
   } = useMemos();
 
   function handleDelete(id: string) {
@@ -39,7 +42,7 @@ const MemosScreen: React.FC = () => {
   async function handleRecording() {
     if (isRecording) {
       const result = await stopRecording();
-      const latestMessage = result?.message
+      const latestMessage = (result?.messages as any[] | undefined)
         ?.filter((m) => m.role === "assistant")
         .pop();
       if (result) {
@@ -56,6 +59,38 @@ const MemosScreen: React.FC = () => {
       }
     } else {
       await startRecording();
+    }
+  }
+
+  async function handleUpload() {
+    try {
+      const pickedAudioFile = await DocumentPicker.getDocumentAsync({
+        type: "audio/*",
+        copyToCacheDirectory: true,
+      });
+      const uri = pickedAudioFile.assets?.pop()?.uri;
+      if (uri) {
+        const response = await uploadFile(uri);
+        const latestMessage = response?.messages
+          ?.filter((m) => m.role === "assistant")
+          .pop();
+
+        if (response) {
+          const newMemo = {
+            id: String(Date.now()),
+            iconColor: "#EF4444",
+            title: "Imported Memo",
+            excerpt: latestMessage?.content ?? "(Uploaded)",
+            timeAgo: "just now",
+            duration: "-",
+            tags: [],
+          };
+          setMemosList((prev) => [newMemo, ...prev]);
+        }
+      }
+    } catch (err) {
+      console.error("Error picking document:", err);
+      Alert.alert("Error", "Failed to pick document. Please try again.");
     }
   }
 
@@ -132,15 +167,21 @@ const MemosScreen: React.FC = () => {
             <Text style={styles.actionText}>Tag All</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionBtn}>
-            <Ionicons name="cloud-upload-outline" size={20} color="#7C3AED" />
-            <Text style={styles.actionText}>Upload</Text>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={handleUpload}
+            disabled={isSending}
+          >
+            <View style={{ alignItems: "center" }}>
+              <Ionicons name="cloud-upload-outline" size={20} color="#7C3AED" />
+              <Text style={styles.actionText}>Upload</Text>
+            </View>
           </TouchableOpacity>
         </View>
 
         <Text style={styles.sectionTitle}>Recent Memos</Text>
 
-        {isLoading && (
+        {isSending && (
           <View
             style={{
               flexDirection: "row",
@@ -148,17 +189,14 @@ const MemosScreen: React.FC = () => {
               marginBottom: 12,
             }}
           >
-            <Ionicons
-              name="sync-outline"
-              size={18}
+            <ActivityIndicator
+              size="small"
               color="#6B7280"
-              style={{
-                marginRight: 8,
-                transform: [{ rotate: `${(elapsedSeconds * 120) % 360}deg` }],
-              }}
+              style={{ marginRight: 8 }}
             />
             <Text style={{ color: "#6B7280" }}>
-              Processing{".".repeat(((elapsedSeconds ?? 0) % 3) + 1)}
+              {isSending ? "Uploading..." : "Processing"}
+              {isSending ? "" : ""}
             </Text>
           </View>
         )}

@@ -5,11 +5,12 @@ import { useEffect, useRef, useState } from "react";
 import { Alert } from "react-native";
 
 export function useMemos() {
-  const { sendAudioMessage, isLoading } = useAi();
+  const { sendAudioMessage } = useAi();
   const recordingRef = useRef<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const timerRef = useRef<number | null>(null);
+  const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -34,14 +35,7 @@ export function useMemos() {
         playsInSilentModeIOS: true,
       });
 
-      const { recording } = await Audio.Recording.createAsync({
-        ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
-        ios: {
-          ...Audio.RecordingOptionsPresets.HIGH_QUALITY.ios,
-          extension: ".m4a",
-        },
-      });
-
+      const { recording } = await Audio.Recording.createAsync();
       recordingRef.current = recording;
       setIsRecording(true);
       setElapsedSeconds(0);
@@ -82,11 +76,16 @@ export function useMemos() {
         });
 
         // sendAudioMessage now returns the updated messages array from useAi
-        const message = await sendAudioMessage(base64Audio);
-        return { duration, uri, message };
+        setIsSending(true);
+        try {
+          const updated = await sendAudioMessage(base64Audio);
+          return { duration, uri: uri ?? undefined, messages: updated } as any;
+        } finally {
+          setIsSending(false);
+        }
       }
 
-      return { duration, uri };
+      return { duration, uri: uri ?? undefined };
     } catch (err) {
       console.error("Failed to stop recording", err);
       return undefined;
@@ -96,12 +95,29 @@ export function useMemos() {
     }
   };
 
+  const uploadFile = async (uri: string) => {
+    try {
+      setIsSending(true);
+      const base64Audio = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      const messages = await sendAudioMessage(base64Audio);
+      return { uri, messages };
+    } catch (err) {
+      console.error("Failed to upload file", err);
+      return undefined;
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   return {
     isRecording,
-    isLoading,
     elapsedSeconds,
     startRecording,
     stopRecording,
+    isSending,
+    uploadFile,
   };
 }
 

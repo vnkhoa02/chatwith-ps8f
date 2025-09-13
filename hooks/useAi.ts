@@ -111,7 +111,6 @@ export function useAi() {
   return {
     messages,
     isStreaming,
-    isLoading: chatMutation.isPending,
     sendMessage: (msg: string, imageUrls: string[]) =>
       chatMutation.mutateAsync({ userMessage: msg, imageUrls, isAudio: false }),
     sendAudioMessage: (base64Audio: string) =>
