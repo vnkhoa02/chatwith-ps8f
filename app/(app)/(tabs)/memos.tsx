@@ -1,5 +1,6 @@
 import MemoCard from "@/components/MemoCard";
 import SharedHeader from "@/components/SharedHeader";
+import { useMemos } from "@/hooks/useMemos";
 import { memos as mockMemos } from "@/mock/memosData";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
@@ -16,6 +17,13 @@ import {
 
 const MemosScreen: React.FC = () => {
   const [memosList, setMemosList] = useState(mockMemos);
+  const {
+    isRecording,
+    isLoading,
+    elapsedSeconds,
+    startRecording,
+    stopRecording,
+  } = useMemos();
 
   function handleDelete(id: string) {
     Alert.alert("Delete memo?", "Are you sure you want to delete this memo?", [
@@ -27,6 +35,30 @@ const MemosScreen: React.FC = () => {
       },
     ]);
   }
+
+  async function handleRecording() {
+    if (isRecording) {
+      const result = await stopRecording();
+      const latestMessage = result?.message
+        ?.filter((m) => m.role === "assistant")
+        .pop();
+      if (result) {
+        const newMemo = {
+          id: String(Date.now()),
+          iconColor: "#EF4444",
+          title: "New Memo",
+          excerpt: latestMessage?.content ?? "unknown",
+          timeAgo: "just now",
+          duration: result.duration,
+          tags: [],
+        };
+        setMemosList((prev) => [newMemo, ...prev]);
+      }
+    } else {
+      await startRecording();
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar style="dark" />
@@ -49,8 +81,36 @@ const MemosScreen: React.FC = () => {
       <View style={styles.content}>
         <View style={styles.recordCard}>
           <View style={styles.recordInner}>
-            <View style={styles.recordButton}>
-              <Ionicons name="mic" size={28} color="#fff" />
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <TouchableOpacity
+                style={[
+                  styles.recordButton,
+                  isRecording && { backgroundColor: "#DC2626" },
+                ]}
+                onPress={handleRecording}
+                accessibilityLabel="Record memo"
+              >
+                <Ionicons
+                  name={isRecording ? "ear" : "mic-outline"}
+                  size={28}
+                  color="#fff"
+                />
+              </TouchableOpacity>
+
+              {/* small timer */}
+              <View style={{ marginLeft: 12 }}>
+                <Text
+                  style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}
+                >
+                  {isRecording
+                    ? `${Math.floor(elapsedSeconds / 60)}:${(
+                        elapsedSeconds % 60
+                      )
+                        .toString()
+                        .padStart(2, "0")}`
+                    : ""}
+                </Text>
+              </View>
             </View>
             <View style={{ alignItems: "center" }}>
               <Text style={styles.recordTitle}>Record New Memo</Text>
@@ -80,6 +140,28 @@ const MemosScreen: React.FC = () => {
 
         <Text style={styles.sectionTitle}>Recent Memos</Text>
 
+        {isLoading && (
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: 12,
+            }}
+          >
+            <Ionicons
+              name="sync-outline"
+              size={18}
+              color="#6B7280"
+              style={{
+                marginRight: 8,
+                transform: [{ rotate: `${(elapsedSeconds * 120) % 360}deg` }],
+              }}
+            />
+            <Text style={{ color: "#6B7280" }}>
+              Processing{".".repeat(((elapsedSeconds ?? 0) % 3) + 1)}
+            </Text>
+          </View>
+        )}
         <FlatList
           style={{ flex: 1 }}
           data={memosList}
