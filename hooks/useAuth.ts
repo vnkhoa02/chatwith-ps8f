@@ -188,9 +188,10 @@ const useAuth = () => {
     VerifyCodeParams
   >({
     mutationFn: async (params) => {
+      console.log("Verifying code with params", params);
       const keyPair = await loadOrCreateKeyPair();
       const signature = signMessage(params.challenge, keyPair.privateKey);
-
+      console.log("Generated signature", signature);
       const response = await fetch(
         `${AUTH_CONFIG.BASE_URL}/api/v1/auth/verify`,
         {

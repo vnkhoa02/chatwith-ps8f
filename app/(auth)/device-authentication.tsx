@@ -31,8 +31,7 @@ export default function DeviceAuthentication() {
     try {
       const response = await sendCode(email);
       console.log("sendCode response", response);
-      const challenge = response?.challenge ?? response?.registration_id ?? "";
-      // Navigate to verify screen and pass email + challenge (challenge may be empty)
+      const challenge = response?.registration_id;
       router.push({
         pathname: "/verify-email",
         params: { email, challenge },
