@@ -1,6 +1,8 @@
+import AddMomentModal from "@/components/AddMomentModal";
+import EditMomentModal from "@/components/EditMomentModal";
 import MomentCard from "@/components/MomentCard";
 import SharedHeader from "@/components/SharedHeader";
-import { moments } from "@/mock/momentsData";
+import useMoments from "@/hooks/useMoments";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
@@ -12,6 +14,10 @@ import {
 } from "react-native";
 
 const MomentsScreen: React.FC = () => {
+  const { moments, addMoment, editMoment } = useMoments();
+  const [showModal, setShowModal] = React.useState(false);
+  const [editingMoment, setEditingMoment] = React.useState<any | null>(null);
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar style="dark" />
@@ -25,12 +31,10 @@ const MomentsScreen: React.FC = () => {
         rightAction={
           <TouchableOpacity
             style={styles.uploadAction}
-            onPress={() => {
-              // TODO: wire upload action
-            }}
-            accessibilityLabel="Upload"
+            onPress={() => setShowModal(true)}
+            accessibilityLabel="Add Moment"
           >
-            <Ionicons name="cloud-upload-outline" size={20} color="#fff" />
+            <Ionicons name="add" size={20} color="#fff" />
           </TouchableOpacity>
         }
       />
@@ -41,6 +45,7 @@ const MomentsScreen: React.FC = () => {
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
           <MomentCard
+            id={item.id}
             iconName={item.iconName}
             iconColor={item.iconColor}
             label={item.label}
@@ -48,9 +53,28 @@ const MomentsScreen: React.FC = () => {
             description={item.description}
             time={item.time}
             tags={item.tags}
+            onPress={() => setEditingMoment(item)}
           />
         )}
         showsVerticalScrollIndicator={false}
+      />
+
+      <AddMomentModal
+        visible={showModal}
+        onClose={() => setShowModal(false)}
+        onSubmit={(payload) => {
+          addMoment(payload as any);
+        }}
+      />
+
+      <EditMomentModal
+        visible={!!editingMoment}
+        onClose={() => setEditingMoment(null)}
+        moment={editingMoment}
+        onSave={(id, updates) => {
+          editMoment(id, updates as any);
+          setEditingMoment(null);
+        }}
       />
     </SafeAreaView>
   );

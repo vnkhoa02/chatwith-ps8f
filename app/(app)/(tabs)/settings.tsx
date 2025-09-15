@@ -1,9 +1,11 @@
 import SharedHeader from "@/components/SharedHeader";
+import useAuth from "@/hooks/useAuth";
 import { AntDesign, Feather, FontAwesome5 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
 import {
+  Alert,
   GestureResponderEvent,
   Image,
   Pressable,
@@ -70,6 +72,7 @@ const Item: React.FC<ItemProps> = ({ label, rightText, icon, onPress }) => {
 
 const SettingsScreen: React.FC = () => {
   const router = useRouter();
+  const { signOut } = useAuth();
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -176,7 +179,24 @@ const SettingsScreen: React.FC = () => {
         </Section>
 
         <View style={styles.signOutWrap}>
-          <Pressable style={styles.signOutButton} onPress={() => {}}>
+          <Pressable
+            style={styles.signOutButton}
+            onPress={() => {
+              Alert.alert(
+                "Sign Out",
+                "Are you sure you want to sign out?",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Sign Out",
+                    style: "destructive",
+                    onPress: () => signOut(),
+                  },
+                ],
+                { cancelable: true }
+              );
+            }}
+          >
             <Text style={styles.signOutText}>Sign Out</Text>
           </Pressable>
         </View>
