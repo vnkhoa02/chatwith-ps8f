@@ -24,3 +24,21 @@ export class AuthError extends Error {
     this.name = "AuthError";
   }
 }
+
+export interface IDeviceCodeResponse {
+  device_code: string;
+  user_code: string;
+  verification_uri: string;
+  verification_uri_complete: string;
+  expires_in: number;
+  interval: number;
+  qr_data: any;
+}
+
+export interface IQrSession {
+  session_id: string;
+  public_key: string;
+  expires_in: number;
+}
+
+export interface ILoginSession extends IDeviceCodeResponse, IQrSession {}

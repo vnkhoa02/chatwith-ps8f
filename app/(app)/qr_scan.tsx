@@ -6,8 +6,10 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -17,10 +19,12 @@ export default function QrScan() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [lastQr, setLastQr] = useState<string | null>(null);
-  const [pairResult, setPairResult] = useState<any | null>(null);
+  const [pairResult, setPairResult] = useState<any>();
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
   const cameraRef = useRef<CameraView | null>(null);
+  const [pasteModalVisible, setPasteModalVisible] = useState(false);
+  const [pasteText, setPasteText] = useState("");
 
   const {
     scan,
@@ -35,37 +39,34 @@ export default function QrScan() {
 
   useEffect(() => {
     if (scanData) {
+      console.log("scanData -->", scanData);
       setPairResult((prev: any) => ({ ...prev, scan: scanData }));
-      const userCode = scanData?.raw?.user_code;
-      if (userCode) {
-        Alert.alert(
-          "Approve Pairing?",
-          "Do you want to approve this pairing?",
-          [
-            {
-              text: "No",
-              style: "cancel",
-              onPress: () => {
-                setScanned(false);
-              },
-            },
-            {
-              text: "Yes",
-              onPress: async () => {
-                try {
-                  await approve(userCode);
-                  Alert.alert("Approved", "Pairing approved successfully.");
-                } catch (err: any) {
-                  console.error("Approve failed", err);
-                  Alert.alert("Approve failed", err?.message ?? String(err));
-                }
-              },
-            },
-          ]
-        );
-      } else {
-        Alert.alert("Scanned", "QR scanned successfully. No approval needed.");
+      const userCode = scanData?.user_code;
+      if (!userCode) {
+        Alert.alert("Invalid QR", "The scanned QR code is invalid.");
+        return;
       }
+      Alert.alert("Approve Pairing?", "Do you want to approve this pairing?", [
+        {
+          text: "No",
+          style: "cancel",
+          onPress: () => {
+            setScanned(false);
+          },
+        },
+        {
+          text: "Yes",
+          onPress: async () => {
+            try {
+              await approve(userCode);
+              Alert.alert("Approved", "Pairing approved successfully.");
+            } catch (err: any) {
+              console.error("Approve failed", err);
+              Alert.alert("Approve failed", err?.message ?? String(err));
+            }
+          },
+        },
+      ]);
     }
   }, [scanData, approve]);
 
@@ -126,7 +127,7 @@ export default function QrScan() {
 
       (async () => {
         try {
-          await scan(data);
+          await scan(JSON.parse(data));
         } catch (err: any) {
           console.error("Scan failed", err);
           Alert.alert("Scan failed", err?.message ?? String(err));
@@ -214,6 +215,12 @@ export default function QrScan() {
               <Text style={styles.buttonText}>Rescan</Text>
             </TouchableOpacity>
             <TouchableOpacity
+              style={styles.button}
+              onPress={() => setPasteModalVisible(true)}
+            >
+              <Text style={styles.buttonText}>Paste QR</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[styles.button, styles.cancelButton]}
               onPress={() => router.back()}
             >
@@ -222,6 +229,77 @@ export default function QrScan() {
           </View>
         </View>
       </View>
+
+      {/* Paste QR modal (JSON or session id only) */}
+      <Modal
+        visible={pasteModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setPasteModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContainer}>
+            <Text style={{ fontWeight: "700", marginBottom: 8 }}>
+              Paste QR JSON or session id
+            </Text>
+            <TextInput
+              value={pasteText}
+              onChangeText={setPasteText}
+              placeholder="Paste QR JSON or session id here"
+              style={styles.pasteInput}
+              multiline
+            />
+
+            <View style={styles.modalActionRow}>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={async () => {
+                  try {
+                    if (
+                      typeof navigator !== "undefined" &&
+                      navigator.clipboard?.readText
+                    ) {
+                      const t = await navigator.clipboard.readText();
+                      setPasteText(t || "");
+                      return;
+                    }
+                  } catch {
+                    // ignore
+                  }
+
+                  Alert.alert(
+                    "Clipboard unavailable",
+                    "Clipboard isn't available here—please paste manually."
+                  );
+                }}
+              >
+                <Text style={styles.buttonText}>Paste from clipboard</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, { marginLeft: 8 }]}
+                onPress={async () => {
+                  try {
+                    const trimmed = pasteText?.trim();
+                    if (!trimmed) {
+                      Alert.alert("No QR text", "Please paste the QR JSON.");
+                      return;
+                    }
+                    await scan(JSON.parse(trimmed));
+                    setPasteModalVisible(false);
+                    setPasteText("");
+                    setScanned(true);
+                  } catch (err: any) {
+                    Alert.alert("Decode failed", String(err?.message ?? err));
+                  }
+                }}
+              >
+                <Text style={styles.buttonText}>Decode text</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* result */}
       <View style={styles.resultContainer}>
@@ -310,4 +388,24 @@ const styles = StyleSheet.create({
     backgroundColor: "#000",
   },
   text: { color: "#fff" },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+  },
+  pasteInput: {
+    minHeight: 80,
+    borderWidth: 1,
+    borderColor: "#DDD",
+    borderRadius: 8,
+    padding: 8,
+    backgroundColor: "#FFF",
+  },
+  modalActionRow: { flexDirection: "row", marginTop: 12 },
 });
