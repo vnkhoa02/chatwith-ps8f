@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Audio } from "expo-av";
+import React, { useEffect, useRef, useState } from "react";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 type MomentCardProps = {
   id?: string | number;
@@ -11,6 +12,9 @@ type MomentCardProps = {
   description: string;
   time?: string;
   tags?: string[];
+  audioUrl?: string;
+  images?: string[];
+  onPress?: () => void;
 };
 
 export default function MomentCard({
@@ -21,9 +25,62 @@ export default function MomentCard({
   description,
   time,
   tags = [],
+  audioUrl,
+  images = [],
+  onPress,
 }: MomentCardProps) {
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+      if (sound) {
+        sound.unloadAsync().catch(() => {});
+      }
+    };
+  }, [sound]);
+
+  async function togglePlayPause() {
+    try {
+      if (!sound && audioUrl) {
+        const { sound: s } = await Audio.Sound.createAsync(
+          { uri: audioUrl },
+          { shouldPlay: true }
+        );
+        if (!isMounted.current) return;
+        setSound(s);
+        setIsPlaying(true);
+        return;
+      }
+
+      if (sound) {
+        const status = await sound.getStatusAsync();
+        if ((status as any).isPlaying) {
+          await sound.pauseAsync();
+          setIsPlaying(false);
+        } else {
+          await sound.playAsync();
+          setIsPlaying(true);
+        }
+      }
+    } catch (err) {
+      // ignore audio errors
+      console.warn("Audio error", err);
+    }
+  }
+  const Container: any = onPress ? TouchableOpacity : View;
+
   return (
-    <View style={styles.card}>
+    <Container onPress={onPress} style={styles.card}>
+      {images.length > 0 ? (
+        <Image
+          source={{ uri: images[0] }}
+          style={styles.thumbnail}
+          resizeMode="cover"
+        />
+      ) : null}
       <View style={styles.rowTop}>
         <View style={styles.leftTop}>
           <View
@@ -43,6 +100,25 @@ export default function MomentCard({
         {description}
       </Text>
 
+      {audioUrl && (
+        <View style={styles.audioRow}>
+          <TouchableOpacity
+            onPress={togglePlayPause}
+            style={styles.playBtn}
+            accessibilityLabel="Play audio"
+          >
+            <Ionicons
+              name={isPlaying ? "pause" : "play"}
+              size={16}
+              color="#fff"
+            />
+          </TouchableOpacity>
+          <Text style={styles.audioLabel}>
+            {isPlaying ? "Playing" : "Play audio"}
+          </Text>
+        </View>
+      )}
+
       <View style={styles.tagsRow}>
         {tags.map((t) => (
           <View key={t} style={[styles.tag, { backgroundColor: tagColor(t) }]}>
@@ -50,7 +126,7 @@ export default function MomentCard({
           </View>
         ))}
       </View>
-    </View>
+    </Container>
   );
 }
 
@@ -136,4 +212,25 @@ const styles = StyleSheet.create({
     color: "#0F172A",
     fontWeight: "600",
   },
+  thumbnail: {
+    width: "100%",
+    height: 180,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  audioRow: {
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  playBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#EF4444",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  audioLabel: { color: "#475569", fontWeight: "600" },
 });
