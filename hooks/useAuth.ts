@@ -97,6 +97,7 @@ const useAuth = () => {
       });
       queryClient.invalidateQueries();
     } catch (error) {
+      console.error("Token saving failed:", error);
       throw new AuthError("Failed to save authentication tokens");
     }
   };

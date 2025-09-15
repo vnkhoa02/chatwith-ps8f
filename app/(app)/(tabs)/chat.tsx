@@ -75,7 +75,9 @@ export default function Chat() {
         playsInSilentModeIOS: true,
       });
 
-      const { recording } = await Audio.Recording.createAsync();
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
       setRecording(recording);
       setIsRecording(true);
     } catch (err) {

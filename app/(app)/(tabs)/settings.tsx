@@ -190,7 +190,10 @@ const SettingsScreen: React.FC = () => {
                   {
                     text: "Sign Out",
                     style: "destructive",
-                    onPress: () => signOut(),
+                    onPress: () =>
+                      signOut().then(() =>
+                        router.replace("/(auth)/device-authentication")
+                      ),
                   },
                 ],
                 { cancelable: true }

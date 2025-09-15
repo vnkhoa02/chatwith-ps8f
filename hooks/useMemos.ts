@@ -35,7 +35,9 @@ export function useMemos() {
         playsInSilentModeIOS: true,
       });
 
-      const { recording } = await Audio.Recording.createAsync();
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
       recordingRef.current = recording;
       setIsRecording(true);
       setElapsedSeconds(0);

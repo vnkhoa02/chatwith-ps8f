@@ -3,15 +3,15 @@ import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    Alert,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 type Props = {
@@ -44,12 +44,10 @@ export default function AddMomentModal({ visible, onClose, onSubmit }: Props) {
   const [recordedUri, setRecordedUri] = useState<string | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const timerRef = useRef<number | null>(null);
-  const [playbackSound, setPlaybackSound] = useState<Audio.Sound | null>(null);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlayingBack, setIsPlayingBack] = useState(false);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const isMountedRef = useRef(true);
-
-  // cleanup ref
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
@@ -105,12 +103,23 @@ export default function AddMomentModal({ visible, onClose, onSubmit }: Props) {
 
   const startRecording = async () => {
     try {
+      if (sound) {
+        sound.unloadAsync().catch(() => {});
+        setSound(null);
+        setIsPlayingBack(false);
+      }
+      if (recordingObj) {
+        await recordingObj.stopAndUnloadAsync();
+        setRecordingObj(null);
+      }
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
       });
       setIsRecording(true);
-      const { recording } = await Audio.Recording.createAsync();
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
       setRecordingObj(recording);
       setRecordedUri(null);
       setElapsedSeconds(0);
@@ -139,47 +148,44 @@ export default function AddMomentModal({ visible, onClose, onSubmit }: Props) {
     }
   }
 
-  async function playRecorded() {
+  const playRecorded = async () => {
     try {
       if (!recordedUri) return;
-      if (playbackSound) {
-        const status = await playbackSound.getStatusAsync();
-        // @ts-ignore
-        if ((status as any).isPlaying) {
-          await playbackSound.pauseAsync();
-          setIsPlayingBack(false);
-        } else {
-          await playbackSound.playAsync();
-          setIsPlayingBack(true);
-        }
-        return;
+      if (sound) {
+        await sound.stopAsync();
+        await sound.unloadAsync();
+        setSound(null);
       }
-      const { sound } = await Audio.Sound.createAsync({ uri: recordedUri }, { shouldPlay: true });
-      setPlaybackSound(sound);
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: recordedUri },
+        { shouldPlay: true, volume: 1.0 }
+      );
+      setSound(newSound);
       setIsPlayingBack(true);
-      sound.setOnPlaybackStatusUpdate((status) => {
-        // @ts-ignore
-        if ((status as any).didJustFinish) {
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (!status.isLoaded) return;
+        if (status.didJustFinish) {
+          newSound.unloadAsync();
+          setSound(null);
           setIsPlayingBack(false);
-          sound.setPositionAsync(0).catch(() => {});
         }
       });
     } catch (err) {
-      console.warn("playback error", err);
+      console.error("Failed to play audio", err);
     }
-  }
+  };
 
   useEffect(() => {
     return () => {
-      if (playbackSound) {
-        playbackSound.unloadAsync().catch(() => {});
+      if (sound) {
+        sound.unloadAsync().catch(() => {});
       }
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
     };
-  }, [playbackSound]);
+  }, [sound]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
@@ -228,7 +234,9 @@ export default function AddMomentModal({ visible, onClose, onSubmit }: Props) {
 
             <View style={styles.mediaControlsRow}>
               <TouchableOpacity
-                onPress={() => (isRecording ? stopRecording() : startRecording())}
+                onPress={() =>
+                  isRecording ? stopRecording() : startRecording()
+                }
                 style={[
                   styles.actionBtn,
                   isRecording ? styles.cancelBtn : styles.addBtn,
@@ -242,14 +250,26 @@ export default function AddMomentModal({ visible, onClose, onSubmit }: Props) {
               </TouchableOpacity>
               <Text style={{ alignSelf: "center", marginLeft: 8 }}>
                 {isRecording
-                  ? `${Math.floor(elapsedSeconds / 60)}:${String(elapsedSeconds % 60).padStart(2, "0")}`
+                  ? `${Math.floor(elapsedSeconds / 60)}:${String(
+                      elapsedSeconds % 60
+                    ).padStart(2, "0")}`
                   : recordedUri
                   ? "Recorded audio ready"
                   : "No recording"}
               </Text>
 
-              <TouchableOpacity onPress={playRecorded} style={[styles.actionBtn, { marginLeft: 12, backgroundColor: "#2563EB" }]}> 
-                <Ionicons name={isPlayingBack ? "pause" : "play"} size={16} color="#fff" />
+              <TouchableOpacity
+                onPress={playRecorded}
+                style={[
+                  styles.actionBtn,
+                  { marginLeft: 12, backgroundColor: "#2563EB" },
+                ]}
+              >
+                <Ionicons
+                  name={isPlayingBack ? "pause" : "play"}
+                  size={16}
+                  color="#fff"
+                />
               </TouchableOpacity>
             </View>
 
