@@ -1,26 +1,23 @@
 import { AUTH_CONFIG } from "@/config/auth";
 import { ILoginSession } from "@/types/auth";
-import { KeyPair } from "@/utils/ed25519";
+import { KeyPair, signMessage } from "@/utils/ed25519";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useMutation } from "@tanstack/react-query";
 import naclUtil from "tweetnacl-util";
 
-async function postJson(url: string, body: any, token?: string) {
+async function postJsonForm(url: string, formData: FormData, token?: string) {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    "Content-Type": "multipart/form-data",
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(url, {
     method: "POST",
     headers,
-    body: JSON.stringify(body),
+    body: formData,
   });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(
-      json?.error?.message || json?.message || `Request failed: ${res.status}`
-    );
-  }
+  const json = await res.json().catch((err) => {
+    console.error("postJsonForm error parsing json", err);
+  });
   return json;
 }
 
@@ -56,15 +53,15 @@ export function useQrPairing() {
       const authToken = await AsyncStorage.getItem(
         AUTH_CONFIG.STORAGE_KEYS.ACCESS_TOKEN
       );
+
       if (!authToken) throw new Error("No auth token found. Please log in.");
-      const { publicKeyBase64 } = await loadEdKeyPair();
+      const { publicKeyBase64, privateKey } = await loadEdKeyPair();
 
       console.log("payload", {
         publicKeyBase64,
         authToken,
       });
 
-      return qrData;
       // 3) POST /device/qr/scan
       // const scanResp = await postJson(
       //   `${AUTH_CONFIG.BASE_URL}/api/v1/device/qr/scan`,
@@ -72,8 +69,7 @@ export function useQrPairing() {
       //   authToken
       // );
       // console.log("Scan response:", scanResp);
-
-      // return { raw: scanResp };
+      return qrData;
     },
   });
 
@@ -86,16 +82,19 @@ export function useQrPairing() {
       if (!authToken) {
         throw new Error("No auth token found. Please log in.");
       }
-      const { privateKeyBase64 } = await loadEdKeyPair();
+      const { privateKey } = await loadEdKeyPair();
 
-      // send approve
-      const approveResp = await postJson(
-        `${AUTH_CONFIG.BASE_URL}/api/v1/device/approve/${userCode}`,
-        { mobile_signature: privateKeyBase64 },
+      const formData = new FormData();
+      formData.append("user_code", userCode);
+      formData.append("signature", signMessage(userCode, privateKey));
+
+      const scanResp = await postJsonForm(
+        `${AUTH_CONFIG.BASE_URL}/oauth/device/approve`,
+        formData,
         authToken
       );
-      console.log("Approve response:", approveResp);
-      return { approve: approveResp };
+      console.log("Scan response:", scanResp);
+      return true;
     },
   });
 
