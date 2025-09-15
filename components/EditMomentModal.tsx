@@ -39,6 +39,10 @@ export default function EditMomentModal({
   const [recordedUri, setRecordedUri] = useState<string | null>(null);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const isMountedRef = useRef(true);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const timerRef = useRef<number | null>(null);
+  const [playbackSound, setPlaybackSound] = useState<Audio.Sound | null>(null);
+  const [isPlayingBack, setIsPlayingBack] = useState(false);
 
   useEffect(() => {
     if (moment) {
@@ -101,8 +105,12 @@ export default function EditMomentModal({
       });
       setIsRecording(true);
       const { recording } = await Audio.Recording.createAsync();
-      setRecordedUri(recording._uri ?? null);
       setRecordingObj(recording);
+      setRecordedUri(null);
+      setElapsedSeconds(0);
+      timerRef.current = setInterval(() => {
+        setElapsedSeconds((s) => s + 1);
+      }, 1000) as unknown as number;
     } catch (err) {
       console.error("Failed to start recording", err);
     }
@@ -116,10 +124,57 @@ export default function EditMomentModal({
       setRecordedUri(uri ?? null);
       setRecordingObj(null);
       setIsRecording(false);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     } catch (err) {
       console.warn("stopRecording error", err);
     }
   }
+
+  async function playRecorded() {
+    try {
+      if (!recordedUri) return;
+      if (playbackSound) {
+        const status = await playbackSound.getStatusAsync();
+        // @ts-ignore
+        if ((status as any).isPlaying) {
+          await playbackSound.pauseAsync();
+          setIsPlayingBack(false);
+        } else {
+          await playbackSound.playAsync();
+          setIsPlayingBack(true);
+        }
+        return;
+      }
+      const { sound } = await Audio.Sound.createAsync({ uri: recordedUri }, { shouldPlay: true });
+      setPlaybackSound(sound);
+      setIsPlayingBack(true);
+      sound.setOnPlaybackStatusUpdate((status) => {
+        // @ts-ignore
+        if ((status as any).didJustFinish) {
+          setIsPlayingBack(false);
+          sound.setPositionAsync(0).catch(() => {});
+        }
+      });
+    } catch (err) {
+      console.warn("playback error", err);
+    }
+  }
+
+  // cleanup playback sound and timers on unmount
+  useEffect(() => {
+    return () => {
+      if (playbackSound) {
+        playbackSound.unloadAsync().catch(() => {});
+      }
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [playbackSound]);
 
   if (!moment) return null;
 
@@ -183,8 +238,16 @@ export default function EditMomentModal({
                 </Text>
               </TouchableOpacity>
               <Text style={{ alignSelf: "center", marginLeft: 8 }}>
-                {recordedUri ? "Recorded audio ready" : "No recording"}
+                {isRecording
+                  ? `${Math.floor(elapsedSeconds / 60)}:${String(elapsedSeconds % 60).padStart(2, "0")}`
+                  : recordedUri
+                  ? "Recorded audio ready"
+                  : "No recording"}
               </Text>
+
+              <TouchableOpacity onPress={playRecorded} style={[styles.actionBtn, { marginLeft: 12, backgroundColor: "#2563EB" }]}> 
+                <Ionicons name={isPlayingBack ? "pause" : "play"} size={16} color="#fff" />
+              </TouchableOpacity>
             </View>
 
             <View style={styles.mediaControlsRow}>
