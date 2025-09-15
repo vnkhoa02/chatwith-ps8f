@@ -1,4 +1,5 @@
 import { AUTH_CONFIG } from "@/config/auth";
+import useMessageStore from "@/stores/messageStore";
 import {
   generatePresignedUrl,
   parseJwt,
@@ -19,6 +20,7 @@ const useChat = () => {
   const [uploadUrl, setUploadUrl] = useState<string | null>(null);
   const [viewUrl, setViewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const { setMessages } = useMessageStore();
 
   // pick image
   const pickImage = async () => {
@@ -92,6 +94,11 @@ const useChat = () => {
     setViewUrl(null);
   };
 
+  const newChat = () => {
+    resetInput();
+    setMessages([]);
+  };
+
   return {
     message,
     setMessage,
@@ -103,6 +110,7 @@ const useChat = () => {
     isUploading,
     pickImage,
     resetInput,
+    newChat,
   };
 };
 

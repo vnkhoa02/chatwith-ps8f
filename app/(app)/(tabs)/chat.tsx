@@ -32,6 +32,7 @@ export default function Chat() {
     fileSize,
     pickImage,
     isUploading,
+    newChat,
   } = useChat();
 
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
@@ -125,6 +126,10 @@ export default function Chat() {
             <TouchableOpacity
               style={styles.iconBtn}
               accessibilityLabel="New chat"
+              onPress={() => {
+                newChat();
+                router.replace("/chat");
+              }}
             >
               <Ionicons name="add-outline" size={24} />
             </TouchableOpacity>
